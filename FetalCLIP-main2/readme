@@ -1,0 +1,67 @@
+使用fetal_hydro_dataset_4数据集，排除手术后的检查，分左右侧，使用时序信息的baseline
+
+
+1.样本单位：case_id + side，即一个病例拆成左肾样本和右肾样本。
+2.标签来源：case_meta.json 中的 left_label 和 right_label。
+3.输入模态：每个时间点的该侧 images 和 report.txt。
+4.图像特征：FetalCLIP image encoder，冻结，单次检查内多图像平均池化。
+应该不仅是平均，平均/最大/最新
+5.文本特征：FetalCLIP text encoder，冻结，直接编码 report.txt。
+6.检查级融合：拼接图像特征、文本特征、图像是否存在标记、阶段标记、孕龄/存在天数。
+7.病例侧别级聚合：mean pooling + max pooling + last visit pooling。
+8.训练策略：Leave-One-Case-Out Cross Validation，严格按 case_id 留一。
+9.不加入结构化报告特征，不微调 FetalCLIP。
+
+FetalCLIP 官方说明其是面向胎儿超声的视觉-语言基础模型，可作为胎儿超声下游任务的特征提取器；
+论文和项目页均描述其预训练于大规模胎儿超声图像-文本配对数据，并支持图像与文本表示学习。
+
+第一步，检查数据结构：
+python scripts/01_scan_dataset.py
+第二步，提取 FetalCLIP 特征：
+python scripts/02_extract_features.py
+第三步，训练 LOOCV baseline：
+python scripts/03_train_loocv.py
+最终会生成：
+outputs/features/
+以及：
+outputs/results/loocv_predictions.csv
+outputs/results/loocv_metrics.csv
+
+改进：
+1.仅有第一批数据（不包含医生分类的超声，只包含有数据的超声图片）时，使用三头交叉注意力显著降低结果，弃用
+2.仅有第一批数据（不包含医生分类的超声，只包含有数据的超声图片）时，不使用三头交叉注意力，使用WeightedRandomSampler，提升结果，采用
+3.仅有第一批数据（不包含医生分类的超声，只包含有数据的超声图片）时,使用WeightedRandomSampler+温度校准，其他指标不变，AUC下降约0.04，弃用
+4.修改G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main2\scripts\02_extract_features.py   改成G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main2\scripts\02_extract_features_1.py
+并且用新的features1去训练（此前的仅使用WeightedRandomSampler），其他指标不变，AUC下降约0.06，暂时采用
+5.features_2
+数据：G:\wxy_codes\Fetal_hydronephrosis\1第一批数据\batch1data_4
++提取特征代码：G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main2\scripts\02_extract_features_1.py
+6.results_5_features2+2WeightedRandomSampler
+用features_2+WeightedRandomSampler    敏感性、准确率等均降低
+7.features_3
+仅使用batch1data_4中的文本和时间等信息输入：02_extract_features_2.py
+8.results_6_features3+2WeightedRandomSampler
+用features_2+WeightedRandomSampler    敏感性不变，阳性样本识别数不变，阴性识别变少，总体准确率略有下降
+9.results_7_features2+03_train_loocv_gru
+使用03_train_loocv_gru.py
+把每一次检查的融合方式换成GRU,全部指标上升明显，但输出结果太过绝对，几乎全部接近于0/1.
+10.results_8_features2+03_train_loocv_gru+no_pos_weight
+仍旧使用GRU，但是在config中USE_POS_WEIGHT = False，减少过拟合，其他指标不变，AUC上升明显，达到0.97
+11.results_8_features2+03_train_loocv_gru+no_pos_weight_savelogit
+配置和参数不变，只是在输出结果里加上Logit值
+12.results_9_features2+03_train_loocv_gru+no_pos_weight+no_bidirectional
+使用单向GRU,准确率和敏感性均降低，但是logit绝对值还是很大
+13.results_10_features2+03_train_loocv_gru+no_pos_weight_epoch50
+还是换回双向GRU，epoch换成50
+其他指标不变，仍是最高，只有AUC下降，logit绝对值过大的现象有缓解，但是大部分绝对值还是7-8左右
+14.results_11_features2+03_train_loocv_gru+no_pos_weight_epoch50+线性层降维度+单向GRU
+指标大幅降低，弃用
+15.
+
+
+环境：
+conda activate wxy_fetalclip
+训练:
+(训练前在G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main2\configs\config.py修改结果保存的路径)
+python G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main2\scripts\03_train_loocv_gru.py
+

@@ -1,0 +1,12 @@
+这个代码是在还没有分左侧和右侧的时候，没有排除术后数据，以每一次检查为单位进行分类的代码
+
+
+提取特征
+cd FetalCLIP-main\baseline_hydro
+python extract_features.py
+
+训练模型
+python train_classifier.py
+
+测试
+python test_classifier.py

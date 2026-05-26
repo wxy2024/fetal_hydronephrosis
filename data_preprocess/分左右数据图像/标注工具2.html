@@ -1,0 +1,1377 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>图片分类标注工具</title>
+  <style>
+    :root{
+      --primary:#2563eb;
+      --bg:#f6f8fb;
+      --panel:rgba(255,255,255,.96);
+      --panelSolid:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+
+      --shadow:0 8px 24px rgba(15, 23, 42, 0.06);
+      --shadow2:0 6px 18px rgba(15, 23, 42, 0.05);
+      --radius:14px;
+      --ring:0 0 0 3px rgba(37, 99, 235, 0.22);
+
+      --ease:cubic-bezier(0.2, 0, 0, 1);
+      --t:160ms var(--ease);
+    }
+
+    [data-theme="dark"]{
+      --primary:#60a5fa;
+      --bg:#0b1220;
+      --panel:rgba(15,23,42,.86);
+      --panelSolid:#0f172a;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --border:#1f2937;
+      --shadow:0 10px 28px rgba(0, 0, 0, 0.35);
+      --shadow2:0 8px 22px rgba(0, 0, 0, 0.28);
+      --ring:0 0 0 3px rgba(96, 165, 250, 0.22);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", Arial, sans-serif;
+      color:var(--text);
+      background:var(--bg);
+    }
+    body::before{display:none}
+
+    a, button, input, textarea, select{transition: color var(--t), background var(--t), border-color var(--t), box-shadow var(--t), transform var(--t), opacity var(--t), filter var(--t)}
+    ::selection{background: rgba(37, 99, 235, 0.18)}
+
+    /* Scrollbar (webkit) */
+    *::-webkit-scrollbar{width:10px; height:10px}
+    *::-webkit-scrollbar-thumb{
+      border-radius:999px;
+      background: rgba(107, 114, 128, 0.35);
+      border:3px solid rgba(255,255,255,.65);
+    }
+    *::-webkit-scrollbar-thumb:hover{background: rgba(107, 114, 128, 0.46)}
+    [data-theme="dark"] *::-webkit-scrollbar-thumb{
+      background: rgba(156, 163, 175, 0.26);
+      border-color: rgba(15, 23, 42, 0.65);
+    }
+    [data-theme="dark"] *::-webkit-scrollbar-thumb:hover{background: rgba(156, 163, 175, 0.36)}
+
+    .app{
+      max-width:1500px;
+      margin:0 auto;
+      padding:14px 18px 120px;
+    }
+
+    .topBar{
+      position:sticky;
+      top:0;
+      z-index:12;
+      padding:10px 0;
+      margin:0 0 12px;
+      background:rgba(246, 248, 251, 0.92);
+      border-bottom:1px solid rgba(229, 231, 235, 0.95);
+      backdrop-filter:saturate(160%) blur(10px);
+    }
+    [data-theme="dark"] .topBar{
+      background:rgba(11, 18, 32, 0.84);
+      border-bottom-color: rgba(31, 41, 55, 0.95);
+    }
+    .header{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    .headerSep{height:0; width:100%; background:transparent; opacity:0;}
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:260px;
+    }
+    .titleRow{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .brandMark{
+      width:26px;
+      height:26px;
+      border-radius:10px;
+      background:var(--primary);
+      box-shadow:none;
+      position:relative;
+      overflow:hidden;
+    }
+    .brandMark::after{display:none}
+    .title h1{
+      font-size:16px;
+      margin:0;
+      letter-spacing:.1px;
+      font-weight:700;
+    }
+    .title .sub{
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+    .picker{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .fileLabel{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      border:1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+      border-radius:12px;
+      background:var(--primary);
+      color:#fff;
+      box-shadow:var(--shadow2);
+      cursor:pointer;
+      user-select:none;
+    }
+    .fileLabel:hover{filter:brightness(1.02)}
+    .fileLabel:active{transform:translateY(1px)}
+    .fileLabel input{display:none}
+    .badge{
+      font-size:12px;
+      color:var(--muted);
+      padding:5px 10px;
+      border-radius:999px;
+      background:rgba(17, 24, 39, 0.04);
+      border:1px solid var(--border);
+      white-space:nowrap;
+    }
+    /* badge inside the primary folder button */
+    .fileLabel .badge{
+      color: rgba(255,255,255,.92);
+      background: rgba(255,255,255,.16);
+      border-color: rgba(255,255,255,.22);
+    }
+    .fileLabel:hover .badge{
+      background: rgba(255,255,255,.20);
+      border-color: rgba(255,255,255,.28);
+    }
+    [data-theme="dark"] .badge{
+      background:rgba(255,255,255,0.04);
+      color:color-mix(in srgb, var(--muted) 92%, #fff);
+    }
+
+    .iconBtn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:40px;
+      height:40px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:var(--panelSolid);
+      color:var(--text);
+      cursor:pointer;
+      user-select:none;
+      box-shadow:none;
+    }
+    .iconBtn:hover{border-color: color-mix(in srgb, var(--primary) 28%, var(--border))}
+    .iconBtn:active{transform:translateY(1px)}
+    .iconBtn:focus{outline:none; box-shadow:var(--ring); border-color: color-mix(in srgb, var(--primary) 38%, var(--border))}
+    .iconBtn .sun{display:none}
+    [data-theme="dark"] .iconBtn .sun{display:inline}
+    [data-theme="dark"] .iconBtn .moon{display:none}
+
+    .panel{
+      background:var(--panelSolid);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:14px;
+      backdrop-filter:none;
+    }
+    .mainLayout{
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:12px;
+      align-items:start;
+    }
+    .leftCol{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-width:0;
+    }
+    .reportWrap{margin:12px 0 14px}
+    .reportWrap{
+      position:relative;
+      overflow:hidden;
+    }
+    .reportWrap::before{
+      content:"";
+      position:absolute;
+      left:0; top:0; bottom:0;
+      width:3px;
+      background: color-mix(in srgb, var(--primary) 85%, #0000);
+      opacity:.9;
+    }
+    .reportWrap .reportInner{
+      padding-left:10px;
+    }
+    .reportHead{
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      gap:12px;
+      margin-bottom:8px;
+    }
+    .reportHead .label{
+      font-weight:600;
+      font-size:14px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .reportHead .hint{
+      font-size:12px;
+      color:var(--muted);
+    }
+    textarea.report{
+      width:100%;
+      min-height:110px;
+      resize:none;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:rgba(17, 24, 39, 0.02);
+      color:var(--text);
+      line-height:1.6;
+      white-space:pre-wrap;
+      overflow:hidden;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:18px;
+      outline:none;
+    }
+    [data-theme="dark"] textarea.report{
+      background:rgba(255, 255, 255, 0.04);
+    }
+    textarea.report:focus{box-shadow:var(--ring); border-color: color-mix(in srgb, var(--primary) 38%, var(--border))}
+
+    .viewer{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:12px;
+    }
+
+    .casePanel .labelRow{
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      gap:12px;
+      margin-bottom:8px;
+    }
+    .casePanel .labelRow .label{
+      font-weight:600;
+      font-size:14px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .casePanel .labelRow .hint{
+      font-size:12px;
+      color:var(--muted);
+    }
+    .caseSelect{
+      width:100%;
+      height:42px;
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:var(--panelSolid);
+      color:var(--text);
+      outline:none;
+      box-shadow:none;
+      backdrop-filter:none;
+    }
+    [data-theme="dark"] .caseSelect{
+      background:var(--panelSolid);
+      box-shadow:none;
+    }
+    .caseSelect:focus{box-shadow:var(--ring); border-color: color-mix(in srgb, var(--primary) 38%, var(--border))}
+    .imgStage{
+      position:relative;
+      border-radius:var(--radius);
+      border:1px solid color-mix(in srgb, var(--border) 85%, var(--primary));
+      background:
+        linear-gradient(45deg, rgba(17,24,39,.04) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(17,24,39,.04) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(17,24,39,.04) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(17,24,39,.04) 75%);
+      background-size: 18px 18px;
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0px;
+      overflow:hidden;
+      min-height:320px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow:var(--shadow);
+    }
+    [data-theme="dark"] .imgStage{
+      background:
+        linear-gradient(45deg, rgba(255,255,255,.06) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255,255,255,.06) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255,255,255,.06) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.06) 75%);
+      background-size: 18px 18px;
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0px;
+      border-color: var(--border);
+    }
+    .imgStage img{
+      max-width:100%;
+      height:auto;
+      display:block;
+      user-select:none;
+      -webkit-user-drag:none;
+      opacity:0;
+      transition: opacity var(--t), transform var(--t), filter var(--t);
+      will-change: opacity, transform;
+    }
+    .imgStage img.isVisible{opacity:1}
+    .imgStage.bump img.isVisible{transform:scale(.997)}
+    @keyframes imgSwapIn{
+      from{opacity:0; transform:translateY(6px) scale(.992)}
+      to{opacity:1; transform:translateY(0) scale(1)}
+    }
+    .imgStage img.swapIn{
+      animation: imgSwapIn 180ms var(--ease) 1;
+    }
+
+    .overlayNav{
+      position:absolute;
+      top:0; bottom:0;
+      width:22%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity var(--t);
+    }
+    .overlayNav.left{left:0; background:linear-gradient(90deg, rgba(17,24,39,.10), transparent)}
+    .overlayNav.right{right:0; background:linear-gradient(270deg, rgba(17,24,39,.10), transparent)}
+    [data-theme="dark"] .overlayNav.left{background:linear-gradient(90deg, rgba(0,0,0,.28), transparent)}
+    [data-theme="dark"] .overlayNav.right{background:linear-gradient(270deg, rgba(0,0,0,.28), transparent)}
+    .imgStage:hover .overlayNav{opacity:1; pointer-events:auto}
+    .overlayNavBtn{
+      width:44px;
+      height:44px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.82);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      backdrop-filter: blur(10px) saturate(160%);
+      box-shadow:var(--shadow2);
+    }
+    [data-theme="dark"] .overlayNavBtn{border-color:var(--border); background:rgba(15,23,42,.78); color:var(--text)}
+    .overlayNavBtn:hover{border-color: color-mix(in srgb, var(--primary) 28%, var(--border))}
+    .overlayNavBtn:active{transform:translateY(1px)}
+    .overlayNavBtn:focus{outline:none; box-shadow:var(--ring); border-color: color-mix(in srgb, var(--primary) 38%, var(--border))}
+    .overlayNavBtn[disabled]{opacity:.35; cursor:not-allowed}
+
+    .empty{
+      padding:28px 18px;
+      text-align:center;
+      color:var(--muted);
+      line-height:1.55;
+      font-size:14px;
+    }
+    .empty .emptyIcon{
+      font-size:30px;
+      line-height:1;
+      margin-bottom:10px;
+      filter:none;
+    }
+    .empty .emptyTitle{
+      font-weight:800;
+      font-size:15px;
+      color:color-mix(in srgb, var(--text) 88%, var(--primary));
+      margin-bottom:6px;
+      letter-spacing:.2px;
+    }
+    .empty .emptySub{
+      font-size:13px;
+      color:var(--muted);
+    }
+    .statusBar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:10px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .statusLeft, .statusRight{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    .navRow{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      margin-top:10px;
+      flex-wrap:wrap;
+    }
+    .btn{
+      border:1px solid var(--border);
+      background:var(--panelSolid);
+      color:var(--text);
+      border-radius:12px;
+      padding:9px 12px;
+      cursor:pointer;
+      user-select:none;
+      font-weight:600;
+      letter-spacing:.1px;
+      backdrop-filter:none;
+      box-shadow:none;
+    }
+    [data-theme="dark"] .btn{background:var(--panelSolid)}
+    .btn:hover{border-color: color-mix(in srgb, var(--primary) 28%, var(--border))}
+    .btn:active{transform:translateY(1px)}
+    .btn:focus{outline:none; box-shadow:var(--ring); border-color: color-mix(in srgb, var(--primary) 38%, var(--border))}
+    .btn[disabled]{
+      opacity:.35;
+      cursor:not-allowed;
+      transform:none;
+      box-shadow:none;
+    }
+    .btn.primary{
+      background:var(--primary);
+      border-color: color-mix(in srgb, var(--primary) 20%, var(--border));
+      color:#fff;
+      box-shadow:var(--shadow2);
+    }
+    .btn.primary:hover{filter:brightness(1.02)}
+    #exportBtn.isReady{filter:brightness(1.02);}
+    .btn.danger{
+      background:#fff;
+      border-color:#fecaca;
+      color:var(--danger);
+    }
+    .btn.danger:hover{border-color:#fca5a5; background:#fff5f5}
+    .dock{
+      position:fixed;
+      left:0; right:0; bottom:0;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(10px) saturate(160%);
+      border-top:1px solid var(--border);
+      padding:10px 14px 12px;
+      z-index:10;
+    }
+    [data-theme="dark"] .dock{
+      background: rgba(15,23,42,.86);
+      border-top-color: var(--border);
+    }
+    .dockInner{
+      max-width:1100px;
+      margin:0 auto;
+      display:flex;
+      gap:12px;
+      align-items:stretch;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+    .rateBox{
+      flex:1 1 520px;
+      background:transparent;
+      border:0;
+      border-radius:0;
+      box-shadow:none;
+      padding:0;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      backdrop-filter:none;
+    }
+    .rateLabel{
+      font-size:12px;
+      color:var(--muted);
+      min-width:170px;
+    }
+    .rateBtns{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .rateBtn{
+      width:78px;
+      height:44px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:var(--panelSolid);
+      font-size:14px;
+      font-weight:800;
+      cursor:pointer;
+      box-shadow:none;
+      position:relative;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:8px 12px;
+    }
+    .rateBtn .rateNum{font-size:16px; font-weight:900}
+    .rateBtn .rateTag{font-size:12px; font-weight:700; color:var(--muted)}
+    [data-theme="dark"] .rateBtn{background:var(--panelSolid)}
+    [data-theme="dark"] .rateBtn .rateTag{color:rgba(156,163,175,.95)}
+
+    .rateBtn:hover{border-color: color-mix(in srgb, var(--primary) 28%, var(--border))}
+    .rateBtn:active{transform:translateY(1px)}
+    .rateBtn:focus{outline:none; box-shadow:var(--ring); border-color: color-mix(in srgb, var(--primary) 38%, var(--border))}
+    .rateBtn.active{
+      border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+      background: color-mix(in srgb, var(--primary) 10%, var(--panelSolid));
+      transform:none;
+    }
+    .rateBtn.feedback{outline:none;}
+    .exportBox{
+      flex:0 0 auto;
+      display:flex;
+      gap:10px;
+      align-items:stretch;
+      flex-wrap:wrap;
+    }
+    .smallHint{
+      font-size:12px;
+      color:var(--muted);
+      align-self:center;
+    }
+
+    .kbdHint{
+      font-size:12px;
+      color:var(--muted);
+      padding:6px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:rgba(17, 24, 39, 0.04);
+      backdrop-filter:none;
+    }
+
+    .fileName{
+      max-width:min(720px, 88vw);
+      display:inline-block;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      color:color-mix(in srgb, var(--text) 80%, var(--primary));
+    }
+
+    .progress{
+      width:170px;
+      height:10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:rgba(17, 24, 39, 0.04);
+      overflow:hidden;
+      position:relative;
+      backdrop-filter:none;
+    }
+    .progress > .bar{
+      height:100%;
+      width:0%;
+      border-radius:999px;
+      background:var(--primary);
+      transition: width 320ms var(--ease);
+    }
+
+    @media (max-width:560px){
+      .app{padding-bottom:170px}
+      .rateLabel{min-width:unset; width:100%}
+      .rateBtn{width:86px; height:46px}
+    }
+    @media (max-width:920px){
+      .mainLayout{grid-template-columns: 1fr}
+      .reportWrap{margin:12px 0 0}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topBar">
+      <div class="header">
+        <div class="title">
+          <div class="titleRow">
+            <div class="brandMark" aria-hidden="true"></div>
+            <h1>本地图片分类标注工具</h1>
+          </div>
+          <div class="sub">选择一个文件夹后，即可按文件名顺序浏览图片并打分，最后导出 CSV（支持未评分留空）。</div>
+        </div>
+        <div class="picker">
+          <label class="fileLabel" title="选择一个包含图片与 .txt 的文件夹">
+            <span>选择文件夹</span>
+            <span id="folderBadge" class="badge">未选择</span>
+            <input id="dirInput" type="file" webkitdirectory />
+          </label>
+          <span id="countsBadge" class="badge">图片：0｜txt：0</span>
+          <button id="themeToggleBtn" class="iconBtn" type="button" title="切换亮色/暗色">
+            <span class="moon" aria-hidden="true">🌙</span>
+            <span class="sun" aria-hidden="true">☀️</span>
+          </button>
+        </div>
+      </div>
+      <div class="headerSep" aria-hidden="true"></div>
+    </div>
+
+    <div class="mainLayout">
+      <div class="leftCol">
+        <div class="panel reportWrap" style="margin:0">
+          <div class="reportInner">
+            <div class="reportHead">
+              <div class="label"><span aria-hidden="true">📄</span> 报告（report.txt）</div>
+              <div id="reportHint" class="hint">未读取</div>
+            </div>
+            <textarea id="reportBox" class="report" readonly placeholder="选择文件夹后，如果存在 report.txt，会显示在这里（保留原格式）。"></textarea>
+          </div>
+        </div>
+
+        <div class="panel casePanel">
+          <div class="labelRow">
+            <div class="label"><span aria-hidden="true">🧾</span> 切换病例</div>
+            <div class="hint">将影响右侧图片与左上报告</div>
+          </div>
+          <select id="caseSelect" class="caseSelect" disabled>
+            <option value="">未选择</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel viewer">
+        <div class="imgStage" id="imgStage">
+          <div class="empty" id="emptyState">
+            <div class="emptyIcon" aria-hidden="true">🖼️</div>
+            <div class="emptyTitle">还没有图片可标注</div>
+            <div class="emptySub">请选择一个文件夹。支持：JPG / PNG / BMP / GIF / WEBP</div>
+          </div>
+          <div class="overlayNav left" aria-hidden="false">
+            <button id="overlayPrevBtn" class="overlayNavBtn" type="button" title="上一张（←）">←</button>
+          </div>
+          <div class="overlayNav right" aria-hidden="false">
+            <button id="overlayNextBtn" class="overlayNavBtn" type="button" title="下一张（→）">→</button>
+          </div>
+          <img id="imgEl" alt="" style="display:none;" />
+        </div>
+
+        <div class="navRow">
+          <button id="prevBtn" class="btn" disabled>上一张</button>
+          <button id="nextBtn" class="btn" disabled>下一张</button>
+          <span id="posText" class="badge">第 0/0</span>
+        </div>
+
+        <div class="statusBar">
+          <div class="statusLeft">
+            <span>当前文件：</span>
+            <span id="fileNameText" class="mono fileName" title="—">—</span>
+          </div>
+          <div class="statusRight">
+            <span id="ratedText" class="badge">已评分：0 / 0</span>
+            <div class="progress" aria-label="已评分进度">
+              <div id="ratedProgressBar" class="bar"></div>
+            </div>
+            <span class="kbdHint">快捷键：1-4 评分｜←/→ 切换</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dock" role="region" aria-label="评分与导出">
+    <div class="dockInner">
+      <div class="rateBox">
+        <div class="rateLabel">
+          对当前图片评分：<span id="currentScoreText" class="mono">未评分</span>
+        </div>
+        <div class="rateBtns">
+          <button class="rateBtn" data-score="1" title="left（快捷键 1）"><span class="rateNum">left</span><span class="rateTag"></span></button>
+          <button class="rateBtn" data-score="2" title="right（快捷键 2）"><span class="rateNum">right</span><span class="rateTag"></span></button>
+          <button class="rateBtn" data-score="3" title="both（快捷键 3）"><span class="rateNum">both</span><span class="rateTag"></span></button>
+          <button class="rateBtn" data-score="4" title="neither（快捷键 4）"><span class="rateNum">neither</span><span class="rateTag"></span></button>
+        </div>
+      </div>
+
+      <div class="exportBox">
+        <button id="exportBtn" class="btn primary" disabled>导出标注结果</button>
+        <div class="smallHint">至少评分 1 张后可导出</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      // theme
+      const THEME_KEY = 'localAnnotatorTheme';
+      const root = document.documentElement;
+      function applyTheme(theme) {
+        if (theme === 'dark') root.setAttribute('data-theme', 'dark');
+        else root.removeAttribute('data-theme');
+      }
+      const savedTheme = localStorage.getItem(THEME_KEY);
+      applyTheme(savedTheme === 'dark' ? 'dark' : 'light');
+
+      const dirInput = document.getElementById('dirInput');
+      const folderBadge = document.getElementById('folderBadge');
+      const countsBadge = document.getElementById('countsBadge');
+
+      const reportBox = document.getElementById('reportBox');
+      const reportHint = document.getElementById('reportHint');
+
+      const themeToggleBtn = document.getElementById('themeToggleBtn');
+
+      const imgEl = document.getElementById('imgEl');
+      const imgStage = document.getElementById('imgStage');
+      const emptyState = document.getElementById('emptyState');
+
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const overlayPrevBtn = document.getElementById('overlayPrevBtn');
+      const overlayNextBtn = document.getElementById('overlayNextBtn');
+      const posText = document.getElementById('posText');
+      const fileNameText = document.getElementById('fileNameText');
+
+      const ratedText = document.getElementById('ratedText');
+      const ratedProgressBar = document.getElementById('ratedProgressBar');
+      const currentScoreText = document.getElementById('currentScoreText');
+
+      const caseSelect = document.getElementById('caseSelect');
+
+      const exportBtn = document.getElementById('exportBtn');
+      const rateBtns = document.querySelectorAll('.rateBtn');
+
+      const IMG_MIME = new Set(['image/jpeg','image/png','image/gif','image/webp','image/bmp']);
+      const IMG_EXT = new Set(['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp']);
+
+      const SCORE_MAP = Object.freeze({
+        1: 'left',
+        2: 'right',
+        3: 'both',
+        4: 'neither',
+      });
+
+      function isSupportedImage(file) {
+        const type = (file.type || '').toLowerCase();
+        if (IMG_MIME.has(type)) return true;
+
+        // 某些环境/文件可能拿不到 type（为空），用扩展名兜底
+        const name = (file.name || '').toLowerCase();
+        const dot = name.lastIndexOf('.');
+        const ext = dot >= 0 ? name.slice(dot) : '';
+        return IMG_EXT.has(ext);
+      }
+
+      let imageFiles = [];
+      let txtFiles = [];
+
+      // multi-case
+      /** @type {Record<string, {caseKey: string, category: string, caseId: string, files: File[], imageFiles: File[], reportFile: File|null}>} */
+      const caseIndex = Object.create(null);
+      /** @type {{caseKey: string, category: string, caseId: string}[]} */
+      let caseList = [];
+      let activeCaseKey = '';
+
+      let currentIndex = -1;
+      let currentObjectUrl = null;
+
+      const ratingsByCase = Object.create(null);
+      let selectedFolderName = '';
+      /** @type {FileSystemDirectoryHandle|null} */
+      let exportRootHandle = null;
+
+      function sanitizeFileBaseName(name) {
+        const n = String(name || '').trim();
+        // Windows 文件名禁用字符：\ / : * ? " < > |
+        const cleaned = n.replace(/[\\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ');
+        return cleaned.length ? cleaned : '标注';
+      }
+
+      function setReport(text, hint) {
+        reportBox.value = String(text ?? '');
+        reportHint.textContent = hint ?? '';
+        autoResizeReportBox();
+      }
+
+      function autoResizeReportBox() {
+        if (!reportBox) return;
+        reportBox.style.height = 'auto';
+        reportBox.style.height = `${reportBox.scrollHeight}px`;
+      }
+
+      function getRatingsMapForActiveCase() {
+        const key = String(activeCaseKey || '');
+        if (!key) return Object.create(null);
+        if (!ratingsByCase[key]) ratingsByCase[key] = Object.create(null);
+        return ratingsByCase[key];
+      }
+
+      function normalizePath(file) {
+        return (file.webkitRelativePath && file.webkitRelativePath.length)
+          ? file.webkitRelativePath
+          : file.name;
+      }
+
+      function formatMiddleEllipsis(str, maxLen) {
+        const s = String(str || '');
+        if (s.length <= maxLen) return s;
+        const keep = Math.max(10, Math.floor((maxLen - 1) / 2));
+        return s.slice(0, keep) + '…' + s.slice(-keep);
+      }
+
+      function getFolderNameFromFiles(files) {
+        const f = files && files[0];
+        if (!f) return '';
+        const p = f.webkitRelativePath || '';
+        const first = p.split('/')[0];
+        return first || '';
+      }
+
+      function isInWithDataImagesFolder(file) {
+        const p = String(file.webkitRelativePath || '');
+        if (!p) return false;
+        // 选择的根目录名/其他路径段/.../with_data_images/.../file.ext
+        const parts = p.split('/').filter(Boolean);
+        return parts.includes('with_data_images');
+      }
+
+      function parseCaseFromRelativePath(relPath) {
+        const p = String(relPath || '');
+        if (!p) return null;
+        const parts = p.split('/').filter(Boolean);
+
+        // Compatible with two root selections:
+        // 1) select project root: root/category/caseId/...
+        // 2) select category root: category/caseId/...
+        let category = '';
+        let caseId = '';
+        const caseLike = (s) => /^\d{6,}$/.test(String(s || ''));
+
+        if (caseLike(parts[1])) {
+          category = parts[0] || '';
+          caseId = parts[1] || '';
+        } else {
+          category = parts[1] || '';
+          caseId = parts[2] || '';
+        }
+
+        if (!category || !caseId) return null;
+        const caseKey = `${category}/${caseId}`;
+        return { caseKey, category, caseId };
+      }
+
+      function getReportPriority(file, parsed) {
+        const p = normalizePath(file);
+        const parts = String(p || '').split('/').filter(Boolean);
+        if (parts.length === 0) return -1;
+
+        const rootShift = (parts[0] === parsed.category) ? 0 : 1;
+        const subParts = parts.slice(rootShift + 2); // after category/caseId
+        if (subParts.length === 1 && String(subParts[0] || '').toLowerCase() === 'report.txt') return 3; // case root
+        if (subParts.length === 2 && String(subParts[1] || '').toLowerCase() === 'report.txt') return 2; // one-level child (left/right)
+        return 1; // any deeper/nonnormal location
+      }
+
+      function setActiveCase(caseKey) {
+        activeCaseKey = String(caseKey || '');
+        const info = activeCaseKey ? caseIndex[activeCaseKey] : null;
+        if (!info) {
+          imageFiles = [];
+          txtFiles = [];
+          setReport('', '未读取');
+          showImageAt(0);
+          return;
+        }
+
+        imageFiles = sortByName(info.imageFiles || []);
+        txtFiles = [...(info.files || [])].filter(f => (f.name || '').toLowerCase().endsWith('.txt'));
+
+        readReportForActiveCase();
+        showImageAt(0);
+      }
+
+      function sortByName(files) {
+        return [...files].sort((a, b) => {
+          const an = normalizePath(a);
+          const bn = normalizePath(b);
+          return an.localeCompare(bn, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' });
+        });
+      }
+
+      function revokeCurrentUrl() {
+        if (currentObjectUrl) {
+          URL.revokeObjectURL(currentObjectUrl);
+          currentObjectUrl = null;
+        }
+      }
+
+      function updateNavUI() {
+        const total = imageFiles.length;
+        const hasImages = total > 0;
+        const inRange = currentIndex >= 0 && currentIndex < total;
+
+        prevBtn.disabled = !hasImages || currentIndex <= 0;
+        nextBtn.disabled = !hasImages || currentIndex >= total - 1;
+        overlayPrevBtn.disabled = prevBtn.disabled;
+        overlayNextBtn.disabled = nextBtn.disabled;
+
+        posText.textContent = `第 ${hasImages ? (currentIndex + 1) : 0}/${total}`;
+        const ratedCount = Object.keys(getRatingsMapForActiveCase()).length;
+        exportBtn.disabled = (ratedCount === 0);
+        exportBtn.classList.toggle('isReady', ratedCount > 0);
+
+        if (!hasImages) {
+          fileNameText.textContent = '—';
+          fileNameText.title = '—';
+          currentScoreText.textContent = '未评分';
+          rateBtns.forEach(b => b.classList.remove('active'));
+          return;
+        }
+
+        if (inRange) {
+          const f = imageFiles[currentIndex];
+          const key = normalizePath(f);
+          fileNameText.textContent = formatMiddleEllipsis(key, 52);
+          fileNameText.title = key;
+          const s = getRatingsMapForActiveCase()[key];
+          currentScoreText.textContent = (typeof s === 'string' && s.length) ? s : '未评分';
+          rateBtns.forEach(b => {
+            const v = Number(b.dataset.score);
+            b.classList.toggle('active', typeof s === 'string' && s === SCORE_MAP[v]);
+          });
+        }
+      }
+
+      function updateRatedUI() {
+        const ratedCount = Object.keys(getRatingsMapForActiveCase()).length;
+        const total = imageFiles.length;
+        ratedText.textContent = `已评分：${ratedCount} / ${total}`;
+        exportBtn.disabled = (ratedCount === 0);
+        exportBtn.classList.toggle('isReady', ratedCount > 0);
+        const pct = total > 0 ? (ratedCount / total) * 100 : 0;
+        if (ratedProgressBar) ratedProgressBar.style.width = `${pct.toFixed(2)}%`;
+      }
+
+      function showImageAt(index) {
+        const total = imageFiles.length;
+        if (total === 0) {
+          currentIndex = -1;
+          revokeCurrentUrl();
+          imgEl.style.display = 'none';
+          emptyState.style.display = 'block';
+          emptyState.innerHTML = '<div class="emptyIcon" aria-hidden="true">🗂️</div><div class="emptyTitle">未找到可用图片</div><div class="emptySub">仅会读取 <span class="mono">with_data_images</span> 文件夹内的图片（JPG / PNG / BMP / GIF / WEBP）</div>';
+          updateNavUI();
+          updateRatedUI();
+          return;
+        }
+
+        if (index < 0) index = 0;
+        if (index >= total) index = total - 1;
+
+        currentIndex = index;
+
+        revokeCurrentUrl();
+
+        // Prevent previous image's selected state from visually carrying over.
+        currentScoreText.textContent = '未评分';
+        rateBtns.forEach(b => b.classList.remove('active'));
+
+        const f = imageFiles[currentIndex];
+        currentObjectUrl = URL.createObjectURL(f);
+
+        // smooth transition
+        imgEl.classList.remove('isVisible');
+        imgEl.classList.remove('swapIn');
+        imgEl.src = currentObjectUrl;
+        imgEl.alt = normalizePath(f);
+        imgEl.style.display = 'block';
+        emptyState.style.display = 'none';
+
+        imgEl.onload = () => {
+          imgEl.classList.add('isVisible');
+          // play a short swap-in animation each time image is shown
+          imgEl.classList.remove('swapIn');
+          void imgEl.offsetWidth;
+          imgEl.classList.add('swapIn');
+        };
+
+        updateNavUI();
+        updateRatedUI();
+      }
+
+      function goPrev() {
+        if (currentIndex > 0) showImageAt(currentIndex - 1);
+      }
+      function goNext() {
+        if (currentIndex < imageFiles.length - 1) showImageAt(currentIndex + 1);
+      }
+
+      function readReportForActiveCase() {
+        const info = activeCaseKey ? caseIndex[activeCaseKey] : null;
+        if (!info) {
+          setReport('', '未读取');
+          return;
+        }
+
+        const report = info.reportFile;
+        if (!report) {
+          setReport('', '当前病例未发现 report.txt');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          setReport(String(reader.result || ''), `已读取 report.txt（${activeCaseKey}）`);
+        };
+        reader.onerror = () => {
+          setReport('', '读取 report.txt 失败');
+        };
+        reader.readAsText(report);
+      }
+
+      function resetAll() {
+        revokeCurrentUrl();
+        imageFiles = [];
+        txtFiles = [];
+        currentIndex = -1;
+        for (const k of Object.keys(caseIndex)) delete caseIndex[k];
+        caseList = [];
+        activeCaseKey = '';
+        for (const k of Object.keys(ratingsByCase)) delete ratingsByCase[k];
+
+        imgEl.removeAttribute('src');
+        imgEl.style.display = 'none';
+        emptyState.style.display = 'block';
+        emptyState.innerHTML = '<div class="emptyIcon" aria-hidden="true">🖼️</div><div class="emptyTitle">还没有图片可标注</div><div class="emptySub">请选择一个文件夹。支持：JPG / PNG / BMP / GIF / WEBP</div>';
+
+        setReport('', '未读取');
+        countsBadge.textContent = '图片：0｜txt：0';
+        ratedText.textContent = '已评分：0 / 0';
+        posText.textContent = '第 0/0';
+        fileNameText.textContent = '—';
+        currentScoreText.textContent = '未评分';
+        exportBtn.disabled = true;
+        exportBtn.classList.remove('isReady');
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        overlayPrevBtn.disabled = true;
+        overlayNextBtn.disabled = true;
+        rateBtns.forEach(b => b.classList.remove('active'));
+
+        if (caseSelect) {
+          caseSelect.innerHTML = '<option value="">未选择</option>';
+          caseSelect.disabled = true;
+        }
+      }
+
+      function buildCsvAndDownload() {
+        const header = '文件名,评分';
+        const lines = [header];
+
+        const ratings = getRatingsMapForActiveCase();
+        for (const f of imageFiles) {
+          const name = normalizePath(f);
+          const score = ratings[name];
+          const escapedName = '"' + String(name).replace(/"/g, '""') + '"';
+          const scoreCell = (typeof score === 'string') ? String(score) : '';
+          lines.push(`${escapedName},${scoreCell}`);
+        }
+
+        const csvText = lines.join('\r\n');
+
+        const bom = '\uFEFF';
+        const blob = new Blob([bom + csvText], { type: 'text/csv;charset=utf-8' });
+
+        const a = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        a.href = url;
+        const base = sanitizeFileBaseName(selectedFolderName || '标注');
+        const casePart = activeCaseKey ? sanitizeFileBaseName(activeCaseKey.replace(/\//g, '_')) : '未选择病例';
+        a.download = `${base}_${casePart}_标注结果.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+        return a.download;
+      }
+
+      function showExportSuccess(message) {
+        // Use native modal for clear user feedback.
+        window.alert(message);
+      }
+
+      function buildCsvTextForActiveCase() {
+        const header = '文件名,评分';
+        const lines = [header];
+
+        const ratings = getRatingsMapForActiveCase();
+        for (const f of imageFiles) {
+          const name = normalizePath(f);
+          const score = ratings[name];
+          const escapedName = '"' + String(name).replace(/"/g, '""') + '"';
+          const scoreCell = (typeof score === 'string') ? String(score) : '';
+          lines.push(`${escapedName},${scoreCell}`);
+        }
+
+        return lines.join('\r\n');
+      }
+
+      async function getOrPickExportRootHandle() {
+        if (exportRootHandle) return exportRootHandle;
+        if (!('showDirectoryPicker' in window)) return null;
+
+        // Ask user to grant write access to the same "总目录"
+        exportRootHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        return exportRootHandle;
+      }
+
+      async function ensureSubdir(rootHandle, name) {
+        return await rootHandle.getDirectoryHandle(name, { create: true });
+      }
+
+      async function exportCsvToCaseFolder() {
+        if (!activeCaseKey) return null;
+        const root = await getOrPickExportRootHandle();
+        if (!root) return null;
+
+        const parts = String(activeCaseKey).split('/').filter(Boolean);
+        const category = parts[0];
+        const caseId = parts[1];
+        if (!category || !caseId) return null;
+
+        const csvText = buildCsvTextForActiveCase();
+        const bom = '\uFEFF';
+        const fileName = '标注结果.csv';
+
+        try {
+          const categoryDir = await ensureSubdir(root, category);
+          const caseDir = await ensureSubdir(categoryDir, caseId);
+          const fileHandle = await caseDir.getFileHandle(fileName, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(new Blob([bom + csvText], { type: 'text/csv;charset=utf-8' }));
+          await writable.close();
+          return `${category}\\${caseId}\\${fileName}`;
+        } catch {
+          // permission denied or unsupported FS backend → fallback
+          return null;
+        }
+      }
+
+      function onRate(score) {
+        if (imageFiles.length === 0 || currentIndex < 0) return;
+        const f = imageFiles[currentIndex];
+        const key = normalizePath(f);
+        const ratings = getRatingsMapForActiveCase();
+        const mapped = SCORE_MAP[score];
+        if (!mapped) return;
+        ratings[key] = mapped;
+        updateRatedUI();
+        updateNavUI();
+
+        // feedback micro-interaction
+        const activeBtn = Array.from(rateBtns).find(b => Number(b.dataset.score) === score);
+        if (activeBtn) {
+          activeBtn.classList.remove('feedback');
+          // force reflow
+          void activeBtn.offsetWidth;
+          activeBtn.classList.add('feedback');
+        }
+
+        if (currentIndex < imageFiles.length - 1) {
+          imgStage.classList.remove('bump');
+          void imgStage.offsetWidth;
+          imgStage.classList.add('bump');
+          showImageAt(currentIndex + 1);
+        }
+      }
+
+      dirInput.addEventListener('change', async () => {
+        resetAll();
+
+        const files = Array.from(dirInput.files || []);
+        const folderName = getFolderNameFromFiles(files);
+        selectedFolderName = folderName || '';
+        folderBadge.textContent = folderName ? folderName : `已选择（${files.length} 项）`;
+        folderBadge.style.background = 'rgba(99,102,241,.12)';
+
+        if (files.length === 0) return;
+
+        // build per-case index
+        for (const f of files) {
+          const rel = normalizePath(f);
+          const parsed = parseCaseFromRelativePath(rel);
+          if (!parsed) continue;
+
+          if (!caseIndex[parsed.caseKey]) {
+            caseIndex[parsed.caseKey] = {
+              caseKey: parsed.caseKey,
+              category: parsed.category,
+              caseId: parsed.caseId,
+              files: [],
+              imageFiles: [],
+              reportFile: null,
+            };
+          }
+
+          const info = caseIndex[parsed.caseKey];
+          info.files.push(f);
+
+          const nameLower = String(f.name || '').toLowerCase();
+          if (nameLower === 'report.txt') {
+            const nextPriority = getReportPriority(f, parsed);
+            const prevPriority = info.reportFile ? getReportPriority(info.reportFile, parsed) : -1;
+            if (nextPriority >= prevPriority) info.reportFile = f;
+          }
+
+          if (isSupportedImage(f) && isInWithDataImagesFolder(f)) {
+            info.imageFiles.push(f);
+          }
+        }
+
+        caseList = Object.keys(caseIndex).map(k => ({
+          caseKey: k,
+          category: caseIndex[k].category,
+          caseId: caseIndex[k].caseId,
+        })).sort((a, b) => {
+          const c = a.category.localeCompare(b.category, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' });
+          if (c !== 0) return c;
+          return a.caseId.localeCompare(b.caseId, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' });
+        });
+
+        // counts (global)
+        const totalImages = Object.values(caseIndex).reduce((sum, info) => sum + (info.imageFiles ? info.imageFiles.length : 0), 0);
+        const totalTxt = Object.values(caseIndex).reduce((sum, info) => sum + (info.files ? info.files.filter(x => String(x.name || '').toLowerCase().endsWith('.txt')).length : 0), 0);
+        countsBadge.textContent = `图片：${totalImages}｜txt：${totalTxt}`;
+
+        // populate selector
+        if (caseSelect) {
+          caseSelect.innerHTML = '';
+          const placeholder = document.createElement('option');
+          placeholder.value = '';
+          placeholder.textContent = '请选择病例';
+          caseSelect.appendChild(placeholder);
+
+          for (const c of caseList) {
+            const opt = document.createElement('option');
+            opt.value = c.caseKey;
+            opt.textContent = `${c.category} / ${c.caseId}`;
+            caseSelect.appendChild(opt);
+          }
+          caseSelect.disabled = caseList.length === 0;
+        }
+
+        if (caseList.length === 0) {
+          setReport('', '未发现病例目录（需要形如：1prenatal/2025xxxxxx/...）');
+          showImageAt(0);
+          return;
+        }
+
+        const firstCase = caseList[0].caseKey;
+        if (caseSelect) caseSelect.value = firstCase;
+        setActiveCase(firstCase);
+      });
+
+      if (caseSelect) {
+        caseSelect.addEventListener('change', () => {
+          const nextKey = String(caseSelect.value || '');
+          if (!nextKey) return;
+          setActiveCase(nextKey);
+        });
+      }
+
+      prevBtn.addEventListener('click', goPrev);
+      nextBtn.addEventListener('click', goNext);
+      overlayPrevBtn.addEventListener('click', goPrev);
+      overlayNextBtn.addEventListener('click', goNext);
+
+      rateBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const s = Number(btn.dataset.score);
+          onRate(s);
+        });
+      });
+
+      exportBtn.addEventListener('click', () => {
+        if (Object.keys(getRatingsMapForActiveCase()).length === 0) return;
+        exportBtn.disabled = true;
+        const oldText = exportBtn.textContent;
+        exportBtn.textContent = '正在导出...';
+        (async () => {
+          const savedPath = await exportCsvToCaseFolder();
+          if (savedPath) {
+            showExportSuccess(`导出成功：\n${savedPath}`);
+          } else {
+            const fileName = buildCsvAndDownload();
+            showExportSuccess(`导出成功（浏览器下载）：\n${fileName}`);
+          }
+          exportBtn.textContent = oldText;
+          exportBtn.disabled = false;
+        })();
+      });
+
+      themeToggleBtn.addEventListener('click', () => {
+        const isDark = root.getAttribute('data-theme') === 'dark';
+        const next = isDark ? 'light' : 'dark';
+        applyTheme(next);
+        localStorage.setItem(THEME_KEY, next);
+      });
+
+      window.addEventListener('keydown', (e) => {
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'textarea') return;
+
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          goPrev();
+          return;
+        }
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          goNext();
+          return;
+        }
+        if (e.key === '1' || e.key === '2' || e.key === '3' || e.key === '4') {
+          e.preventDefault();
+          onRate(Number(e.key));
+        }
+      });
+
+      window.addEventListener('beforeunload', () => {
+        revokeCurrentUrl();
+      });
+
+      resetAll();
+      folderBadge.textContent = '未选择';
+    })();
+  </script>
+</body>
+</html>
