@@ -156,7 +156,8 @@ class ModularGRUSideClassifier(nn.Module):
                     device=device,
                 )
 
-            img_feat, image_mask, image_attn = self.image_pool(image_features)
+            #img_feat, image_mask, image_attn = self.image_pool(image_features)
+            img_feat, image_mask, image_attn = self.image_pool(image_features,text_feat)
 
             phase_flag = float(visit.get("phase_flag", 0.0))
 

@@ -165,6 +165,13 @@ def train_one_fold(
 ):
     device = torch.device(DEVICE if torch.cuda.is_available() else "cpu")
 
+    print("[Device Check] DEVICE from config:", DEVICE)
+    print("[Device Check] torch.cuda.is_available():", torch.cuda.is_available())
+    print("[Device Check] actual training device:", device)
+
+    if torch.cuda.is_available():
+        print("[Device Check] GPU name:", torch.cuda.get_device_name(0))
+
     train_loader = make_train_loader(train_items)
 
     # model = AttentionGRUSideClassifier(
@@ -186,6 +193,7 @@ def train_one_fold(
         dropout=DROPOUT,
         bidirectional=GRU_BIDIRECTIONAL,
     ).to(device)
+    print("[Device Check] model device:", next(model.parameters()).device)
 
     if USE_POS_WEIGHT:
         train_labels = np.array([int(x["label"]) for x in train_items])
@@ -226,6 +234,7 @@ def train_one_fold(
             )
 
             logits, _ = model(batch, return_attention=False)
+            
 
             loss = criterion(logits, labels)
 

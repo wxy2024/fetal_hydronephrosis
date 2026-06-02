@@ -6,12 +6,12 @@ from pathlib import Path
 # =========================
 
 # 图像聚合方式：
-# mean / attention / gated_mil
-IMAGE_POOLING_TYPE = "attention"
+# mean / attention / gated_mil / text_cross_attention / sra_gated_mil
+IMAGE_POOLING_TYPE = "sra_gated_mil"
 
 # 检查级融合方式：
-# direct_concat / gated_multimodal
-VISIT_FUSION_TYPE = "gated_multimodal"
+# direct_concat / gated_multimodal / film_gated_multimodal / transformer_token
+VISIT_FUSION_TYPE = "film_gated_multimodal"
 
 FUSION_HIDDEN_DIM = None
 
@@ -24,7 +24,7 @@ RAW_ROOT = Path(r"G:\wxy_codes\Fetal_hydronephrosis\dataset\3合并12批数据\r
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
-RESULT_DIR = OUTPUT_ROOT / "results_3_data1and2_fig_attention_visit_gated_multimodal_gru"
+RESULT_DIR = OUTPUT_ROOT / "results_6_data1and2_fig_sra_gated_mil_visit_film_gated_multimodal_gru"
 LOG_DIR = OUTPUT_ROOT / "logs"
 
 # =========================
@@ -53,6 +53,7 @@ MAX_REPORT_CHARS = 512
 # 4. 训练配置
 # =========================
 SEED = 42
+# epoch 没标注就默认是50
 NUM_EPOCHS = 50
 LR = 1e-3
 WEIGHT_DECAY = 1e-4
