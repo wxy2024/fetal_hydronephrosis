@@ -7,13 +7,13 @@ from pathlib import Path
 # =========================
 
 # 这里改成你的 raw 文件夹路径
-RAW_ROOT = Path(r"G:\wxy_codes\Fetal_hydronephrosis\1第一批数据\batch1data_4\raw")
+RAW_ROOT = Path(r"G:\wxy_codes\Fetal_hydronephrosis\dataset\3合并12批数据\raw")
 
 # 输出目录
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
-FEATURE_DIR = OUTPUT_ROOT / "features_2"
-RESULT_DIR = OUTPUT_ROOT / "results_11_features2+03_gru_nobidirec_epo50_DR"
+FEATURE_DIR = OUTPUT_ROOT / "features_4"
+RESULT_DIR = OUTPUT_ROOT / "results_12_features4+03_gru_nobidirec_epo50_DR"
 LOG_DIR = OUTPUT_ROOT / "logs"
 
 

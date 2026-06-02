@@ -1,9 +1,47 @@
-.venv/
-__pycache__/
+# 结果文件
+outputs/
+
+# 数据文件夹（核心！防止误传大文件）
 dataset/
-checkpoints/
-wandb/
+*.dcm
+*.nii
+*.nii.gz
+
+# Python 相关
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+*.ipynb_checkpoints/
+
+# 其他临时文件
+*.log
+*.tmp
+*.bak
+.DS_Store
+
+
+# 需要忽略的整文件夹
+data_preprocess/
+dataset/
+FetalCLIP/
+FetalCLIP-main1/
+FetalCLIP-main3/
+
+
+# 通用补充（模型、数据、缓存，防止后续误传）
 *.pt
 *.pth
-*.ckpt
-*.log
+*.dcm
+*.nii
+*.nii.gz
+**/outputs/
+__pycache__/
+*.pyc
+*.ipynb_checkpoints/
+.env
+.venv/
+

@@ -56,7 +56,12 @@ outputs/results/loocv_metrics.csv
 其他指标不变，仍是最高，只有AUC下降，logit绝对值过大的现象有缓解，但是大部分绝对值还是7-8左右
 14.results_11_features2+03_train_loocv_gru+no_pos_weight_epoch50+线性层降维度+单向GRU
 指标大幅降低，弃用
-15.
+15.features_4
+3合并12批数据+02_extract_features_1.py
+16.results_12_features4+03_gru_nobidirec_epo50_DR
+使用合并12批数据的特征，
+灵敏度上升明显，其他指标有微小下降，主要是因为出现了一个假阳例，下降可以忽略不计
+
 
 
 环境：
