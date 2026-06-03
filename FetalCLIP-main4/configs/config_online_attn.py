@@ -6,8 +6,8 @@ from pathlib import Path
 # =========================
 
 # 图像聚合方式：
-# mean / attention / gated_mil / text_cross_attention / sra_gated_mil
-IMAGE_POOLING_TYPE = "sra_gated_mil"
+# mean / attention / gated_mil / text_cross_attention / sra_gated_mil / rrs_gated_mil
+IMAGE_POOLING_TYPE = "attention"
 
 # 检查级融合方式：
 # direct_concat / gated_multimodal / film_gated_multimodal / transformer_token
@@ -24,7 +24,7 @@ RAW_ROOT = Path(r"G:\wxy_codes\Fetal_hydronephrosis\dataset\3合并12批数据\r
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
-RESULT_DIR = OUTPUT_ROOT / "results_6_data1and2_fig_sra_gated_mil_visit_film_gated_multimodal_gru"
+RESULT_DIR = OUTPUT_ROOT / "results_9_data1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_gru"
 LOG_DIR = OUTPUT_ROOT / "logs"
 
 # =========================
@@ -78,3 +78,23 @@ USE_MEMORY_CACHE = True
 
 # 是否在预测结果 csv 中保存每次检查内各图像的 attention 权重。
 SAVE_ATTENTION = True
+
+
+
+# =========================
+# 6. ContiFormer 配置
+# =========================
+TEMPORAL_BACKBONE = "contiformer"
+
+CONTIFORMER_D_MODEL = 128
+CONTIFORMER_D_INNER = 256
+CONTIFORMER_N_LAYERS = 1
+CONTIFORMER_N_HEAD = 4
+CONTIFORMER_D_K = 32
+CONTIFORMER_D_V = 32
+
+CONTIFORMER_DROPOUT = DROPOUT
+
+CONTIFORMER_METHOD_ODE = "rk4"
+CONTIFORMER_ATOL_ODE = 1e-3
+CONTIFORMER_RTOL_ODE = 1e-3

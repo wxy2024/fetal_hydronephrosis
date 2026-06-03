@@ -40,7 +40,10 @@
 & "D:\anaconda3\shell\condabin\conda-hook.ps1"
 
 conda activate wxy_fetalclip
+
+conda activate wxy_fetalclip_contiformer
 训练:
 (训练前在G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main4\configs\config_online_attn.py修改结果保存的路径)
 python G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main4\scripts\v1_train_loocv_online_attn_gru.py
 
+python G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main4\scripts\v1_train_loocv_online_attn_contiformer.py
