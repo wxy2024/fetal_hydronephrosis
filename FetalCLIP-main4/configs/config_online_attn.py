@@ -7,7 +7,7 @@ from pathlib import Path
 
 # 图像聚合方式：
 # mean / attention / gated_mil / text_cross_attention / sra_gated_mil / rrs_gated_mil
-IMAGE_POOLING_TYPE = "attention"
+IMAGE_POOLING_TYPE = "rrs_gated_mil"
 
 # 检查级融合方式：
 # direct_concat / gated_multimodal / film_gated_multimodal / transformer_token
@@ -24,7 +24,19 @@ RAW_ROOT = Path(r"G:\wxy_codes\Fetal_hydronephrosis\dataset\3合并12批数据\r
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
-RESULT_DIR = OUTPUT_ROOT / "results_9_data1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_gru"
+#RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
+#结果文件命名改这两个
+EXP_ID = 10
+TEMPORAL_BACKBONE = "gru"
+#contiformer / 
+
+RESULT_DIR = OUTPUT_ROOT / (
+    f"results_{EXP_ID}_new1and2"
+    f"_fig_{IMAGE_POOLING_TYPE}"
+    f"_visit_{VISIT_FUSION_TYPE}"
+    f"_{TEMPORAL_BACKBONE}"
+)
+
 LOG_DIR = OUTPUT_ROOT / "logs"
 
 # =========================
@@ -86,10 +98,10 @@ SAVE_ATTENTION = True
 # =========================
 TEMPORAL_BACKBONE = "contiformer"
 
-CONTIFORMER_D_MODEL = 128
-CONTIFORMER_D_INNER = 256
+CONTIFORMER_D_MODEL = 32
+CONTIFORMER_D_INNER = 64
 CONTIFORMER_N_LAYERS = 1
-CONTIFORMER_N_HEAD = 4
+CONTIFORMER_N_HEAD = 1
 CONTIFORMER_D_K = 32
 CONTIFORMER_D_V = 32
 

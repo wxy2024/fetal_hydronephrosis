@@ -33,7 +33,7 @@ def parse_exam_date(visit: Dict) -> Optional[datetime]:
     return None
 
 
-class ModularGRUSideClassifier(nn.Module):
+class ModularContiFormerSideClassifier(nn.Module):
     """
     模块化版本：
 
@@ -57,10 +57,16 @@ class ModularGRUSideClassifier(nn.Module):
         visit_fusion_type: str = "gated_multimodal",
         attn_hidden_dim: int = 256,
         fusion_hidden_dim: int = None,
-        gru_hidden_dim: int = 128,
-        gru_num_layers: int = 1,
+        contiformer_d_model: int = 128,
+        contiformer_d_inner: int = 256,
+        contiformer_n_layers: int = 1,
+        contiformer_n_head: int = 4,
+        contiformer_d_k: int = 32,
+        contiformer_d_v: int = 32,
+        contiformer_method_ode: str = "rk4",
+        contiformer_atol_ode: float = 1e-3,
+        contiformer_rtol_ode: float = 1e-3,
         dropout: float = 0.3,
-        bidirectional: bool = True,
     ):
         super().__init__()
 
@@ -91,8 +97,8 @@ class ModularGRUSideClassifier(nn.Module):
 
         self.visit_dim = self.visit_fusion.output_dim
 
-        self.bidirectional = bidirectional
-        self.num_directions = 2 if bidirectional else 1
+        # self.bidirectional = bidirectional
+        # self.num_directions = 2 if bidirectional else 1
 
         # self.gru = nn.GRU(
         #     input_size=self.visit_dim,
@@ -199,9 +205,10 @@ class ModularGRUSideClassifier(nn.Module):
 
             if first_date is not None and exam_date is not None:
                 days_since_first = float((exam_date - first_date).days)
-                visit_times.append(days_since_first / 1000.0)
             else:
                 days_since_first = 0.0
+
+            visit_times.append(days_since_first / 1000.0)
 
             if prev_date is not None and exam_date is not None:
                 interval_days = float((exam_date - prev_date).days)
