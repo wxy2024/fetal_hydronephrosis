@@ -44,10 +44,10 @@ LOG_DIR = OUTPUT_ROOT / "logs"
 # 2. FetalCLIP 配置
 # =========================
 FETALCLIP_CONFIG_PATH = Path(
-    r"G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main4\FetalCLIP_config.json"
+    r"G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main5\FetalCLIP_config.json"
 )
 FETALCLIP_WEIGHT_PATH = Path(
-    r"G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main4\FetalCLIP_weights.pt"
+    r"G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main5\FetalCLIP_weights.pt"
 )
 FETALCLIP_MODEL_NAME = "FetalCLIP"
 
@@ -97,17 +97,17 @@ SAVE_ATTENTION = True
 # =========================
 # 6. ContiFormer 配置
 # =========================
-TEMPORAL_BACKBONE = "contiformer"
+# TEMPORAL_BACKBONE = "contiformer"
 
-CONTIFORMER_D_MODEL = 32
-CONTIFORMER_D_INNER = 64
-CONTIFORMER_N_LAYERS = 1
-CONTIFORMER_N_HEAD = 1
-CONTIFORMER_D_K = 32
-CONTIFORMER_D_V = 32
+# CONTIFORMER_D_MODEL = 32
+# CONTIFORMER_D_INNER = 64
+# CONTIFORMER_N_LAYERS = 1
+# CONTIFORMER_N_HEAD = 1
+# CONTIFORMER_D_K = 32
+# CONTIFORMER_D_V = 32
 
-CONTIFORMER_DROPOUT = DROPOUT
+# CONTIFORMER_DROPOUT = DROPOUT
 
-CONTIFORMER_METHOD_ODE = "rk4"
-CONTIFORMER_ATOL_ODE = 1e-3
-CONTIFORMER_RTOL_ODE = 1e-3
+# CONTIFORMER_METHOD_ODE = "rk4"
+# CONTIFORMER_ATOL_ODE = 1e-3
+# CONTIFORMER_RTOL_ODE = 1e-3
