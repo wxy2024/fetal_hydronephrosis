@@ -1,0 +1,50 @@
+使用fetal_hydro_dataset_4数据集，排除手术后的检查，分左右侧，使用时序信息的baseline
+
+
+1.样本单位：case_id + side，即一个病例拆成左肾样本和右肾样本。
+2.标签来源：case_meta.json 中的 left_label 和 right_label。
+3.输入模态：每个时间点的该侧 images 和 report.txt。
+4.图像特征：FetalCLIP image encoder，冻结，单次检查内多次图像attention pooling
+
+5.文本特征：FetalCLIP text encoder，冻结，直接编码 report.txt。
+6.检查级融合：拼接图像特征、文本特征、图像是否存在标记、阶段标记、孕龄/存在天数。
+7.病例侧别级聚合：mean pooling + max pooling + last visit pooling。
+8.训练策略：Leave-One-Case-Out Cross Validation，严格按 case_id 留一。
+9.不加入结构化报告特征，不微调 FetalCLIP。
+
+main4这一版改进：
+
+1.不再运行 02_extract_features.py
+2.不再保存 outputs/features/*.pt
+3.训练脚本直接读取 raw 数据
+4.训练前把 FetalCLIP 图像/文本特征提取到内存
+5.一次检查内多张图像由 Attention Pooling 聚合
+6.visit 序列继续输入 GRU
+7.继续按 case_id 做 LOOCV，避免左右侧泄漏
+
+
+1.results_1_data1and2_online_attention_gru
+用1+2批次数据+图像聚合换成attention pooling+其他的不动
+敏感度，准确率，F1分数均提升，其他不变
+
+2.results_2_data1and2_gated_attention_mil_pooling_gru
+把图像聚合方式换成 gated_attention_mil_pooling  指标均下降，和原来的平均池化指标相同
+
+3.results_3_data1and2_fig_attention_visit_gated_multimodal_gru
+图像融合方式用attention  图像特征文本特征融合方式用visit_gated_multimodal  结果上升
+
+
+main5改进：
+把时间序列不规则采样模块变成可插拔
+增加创新点模块ca_grud
+
+环境：
+& "D:\anaconda3\shell\condabin\conda-hook.ps1"
+
+conda activate wxy_fetalclip
+
+conda activate wxy_fetalclip_contiformer
+训练:
+(训练前在G:\wxy_codes\Fetal_hydronephrosis\FetalCLpython G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main4\scripts\v1_train_loocv_online_attn_contiformer.pyIP-main4\configs\config_online_attn.py修改结果保存的路径)
+python G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main4\scripts\v1_train_loocv_online_attn_gru.py
+
