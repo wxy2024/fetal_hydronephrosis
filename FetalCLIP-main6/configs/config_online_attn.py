@@ -28,7 +28,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 14
+EXP_ID = 16
 
 
 RESULT_DIR = OUTPUT_ROOT / (
@@ -67,7 +67,7 @@ NUM_EPOCHS = 50
 LR = 1e-3
 WEIGHT_DECAY = 1e-4
 DROPOUT = 0.3
-BATCH_SIZE = 8
+BATCH_SIZE = 4
 
 # 是否使用 pos_weight 处理类别不平衡。
 # 你之前发现 USE_POS_WEIGHT=False 时 GRU 结果更稳，所以这里默认 False。
