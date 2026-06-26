@@ -298,6 +298,31 @@ def make_case_level_stratified_folds_fallback(case_df, n_splits=5, seed=42):
     return folds
 
 
+def summarize_fold_metrics(fold_metric_rows):
+    metric_names = [
+        "Accuracy",
+        "Sensitivity",
+        "Specificity",
+        "Precision_PPV",
+        "NPV",
+        "F1",
+        "AUC",
+    ]
+
+    summary = {"num_folds": len(fold_metric_rows)}
+    fold_metric_df = pd.DataFrame(fold_metric_rows)
+
+    for metric_name in metric_names:
+        values = pd.to_numeric(fold_metric_df[metric_name], errors="coerce").dropna()
+        summary[f"{metric_name}_mean"] = float(values.mean()) if len(values) > 0 else None
+        summary[f"{metric_name}_std"] = float(values.std(ddof=1)) if len(values) > 1 else None
+
+    for count_name in ["TN", "FP", "FN", "TP"]:
+        summary[f"{count_name}_sum"] = int(fold_metric_df[count_name].sum())
+
+    return summary
+
+
 def main():
     set_seed(SEED)
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
@@ -413,13 +438,21 @@ def main():
 
     y_true = [r["label"] for r in all_fold_results]
     y_prob = [r["prob"] for r in all_fold_results]
-    metrics = compute_binary_metrics(y_true, y_prob, threshold=0.5)
+    pooled_metrics = compute_binary_metrics(y_true, y_prob, threshold=0.5)
+    cv_metrics = summarize_fold_metrics(fold_metric_rows)
 
     print("\n" + "=" * 80)
-    print("5-Fold CV summary")
+    print("5-Fold CV summary: mean ± std across folds")
     print("=" * 80)
 
-    for k, v in metrics.items():
+    for k, v in cv_metrics.items():
+        print(f"{k}: {v}")
+
+    print("\n" + "=" * 80)
+    print("Pooled out-of-fold metrics")
+    print("=" * 80)
+
+    for k, v in pooled_metrics.items():
         print(f"{k}: {v}")
 
     pred_df = pd.DataFrame(all_fold_results)
@@ -430,14 +463,19 @@ def main():
     fold_metric_save_path = RESULT_DIR / "5fold_fold_metrics.csv"
     fold_metric_df.to_csv(fold_metric_save_path, index=False, encoding="utf-8-sig")
 
-    metric_df = pd.DataFrame([metrics])
+    metric_df = pd.DataFrame([cv_metrics])
     metric_save_path = RESULT_DIR / "5fold_metrics.csv"
     metric_df.to_csv(metric_save_path, index=False, encoding="utf-8-sig")
+
+    pooled_metric_df = pd.DataFrame([pooled_metrics])
+    pooled_metric_save_path = RESULT_DIR / "5fold_pooled_metrics.csv"
+    pooled_metric_df.to_csv(pooled_metric_save_path, index=False, encoding="utf-8-sig")
 
     print("\nResults saved:")
     print(f"predictions: {pred_save_path}")
     print(f"fold metrics: {fold_metric_save_path}")
-    print(f"metrics: {metric_save_path}")
+    print(f"metrics mean/std: {metric_save_path}")
+    print(f"pooled metrics: {pooled_metric_save_path}")
 
 
 if __name__ == "__main__":
