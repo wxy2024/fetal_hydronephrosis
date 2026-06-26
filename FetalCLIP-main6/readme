@@ -68,7 +68,6 @@ conda activate wxy_fetalclip_contiformer
 
 cd G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main6
 
-python scripts\v1_train_loocv_online_attn_gru.py
 
 
 
