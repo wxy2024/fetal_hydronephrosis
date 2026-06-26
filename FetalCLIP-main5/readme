@@ -38,6 +38,11 @@ main5改进：
 把时间序列不规则采样模块变成可插拔
 增加创新点模块ca_grud
 
+
+results_12 GRU_BIDIRECTIONAL = False
+results_13 GRU_BIDIRECTIONAL = True
+
+
 环境：
 & "D:\anaconda3\shell\condabin\conda-hook.ps1"
 
@@ -47,4 +52,9 @@ conda activate wxy_fetalclip_contiformer
 训练:
 (训练前在G:\wxy_codes\Fetal_hydronephrosis\FetalCLpython G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main4\scripts\v1_train_loocv_online_attn_contiformer.pyIP-main4\configs\config_online_attn.py修改结果保存的路径)
 python G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main5\scripts\v1_train_loocv_online_attn_gru.py
+
+
+
+
+https://github.com/wxy2024/fetal_hydronephrosis.git
 

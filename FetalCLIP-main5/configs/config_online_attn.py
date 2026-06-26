@@ -15,8 +15,8 @@ VISIT_FUSION_TYPE = "film_gated_multimodal"
 
 FUSION_HIDDEN_DIM = None
 
-TEMPORAL_BACKBONE = "ca_grud"
-#contiformer / ca_grud / gru
+TEMPORAL_BACKBONE = "psalm_grud"
+#contiformer / ca_grud / gru /psalm_grud
 
 
 # =========================
@@ -28,7 +28,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 11
+EXP_ID = 13
 
 
 RESULT_DIR = OUTPUT_ROOT / (

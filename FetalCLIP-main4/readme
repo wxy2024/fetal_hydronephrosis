@@ -44,5 +44,9 @@ conda activate wxy_fetalclip
 conda activate wxy_fetalclip_contiformer
 训练:
 (训练前在G:\wxy_codes\Fetal_hydronephrosis\FetalCLpython G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main4\scripts\v1_train_loocv_online_attn_contiformer.pyIP-main4\configs\config_online_attn.py修改结果保存的路径)
-python G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main4\scripts\v1_train_loocv_online_attn_gru.py
+python G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main5\scripts\v1_train_loocv_online_attn_gru.py
 
+
+
+github链接
+https://github.com/wxy2024/fetal_hydronephrosis.git
