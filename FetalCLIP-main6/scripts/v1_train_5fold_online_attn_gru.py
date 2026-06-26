@@ -193,8 +193,18 @@ def train_one_fold(train_items, test_items, feature_dim: int, fold_id: str, test
             logits, _ = model(batch, return_attention=False)
             loss = criterion(logits, labels)
 
+            if not torch.isfinite(logits).all() or not torch.isfinite(loss):
+                bad_samples = [str(x.get("sample_id", "")) for x in batch]
+                raise RuntimeError(
+                    "Non-finite logits/loss detected before backward. "
+                    f"samples={bad_samples}, "
+                    f"logits={logits.detach().cpu().tolist()}, "
+                    f"loss={float(loss.detach().cpu().item())}"
+                )
+
             optimizer.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
             optimizer.step()
 
             losses.append(float(loss.item()))
