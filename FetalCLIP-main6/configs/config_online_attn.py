@@ -43,12 +43,8 @@ LOG_DIR = OUTPUT_ROOT / "logs"
 # =========================
 # 2. FetalCLIP 配置
 # =========================
-FETALCLIP_CONFIG_PATH = Path(
-    r"G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main6\FetalCLIP_config.json"
-)
-FETALCLIP_WEIGHT_PATH = Path(
-    r"G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main6\FetalCLIP_weights.pt"
-)
+FETALCLIP_CONFIG_PATH = PROJECT_ROOT / "FetalCLIP_config.json"
+FETALCLIP_WEIGHT_PATH = PROJECT_ROOT / "FetalCLIP_weights.pt"
 FETALCLIP_MODEL_NAME = "FetalCLIP"
 
 # =========================

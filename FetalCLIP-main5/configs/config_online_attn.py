@@ -22,7 +22,7 @@ TEMPORAL_BACKBONE = "psalm_grud"
 # =========================
 # 1. 数据路径配置
 # =========================
-RAW_ROOT = Path(r"G:\wxy_codes\Fetal_hydronephrosis\dataset\3合并12批数据\raw")
+RAW_ROOT = Path(r"G:\wxy_codes\dataset_hydro_123\raw")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
@@ -32,7 +32,7 @@ EXP_ID = 15
 
 
 RESULT_DIR = OUTPUT_ROOT / (
-    f"results_{EXP_ID}_new1and2"
+    f"results_{EXP_ID}_dataset_123"
     f"_fig_{IMAGE_POOLING_TYPE}"
     f"_visit_{VISIT_FUSION_TYPE}"
     f"_{TEMPORAL_BACKBONE}"
