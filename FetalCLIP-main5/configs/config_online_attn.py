@@ -28,7 +28,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 13
+EXP_ID = 15
 
 
 RESULT_DIR = OUTPUT_ROOT / (
@@ -43,12 +43,8 @@ LOG_DIR = OUTPUT_ROOT / "logs"
 # =========================
 # 2. FetalCLIP 配置
 # =========================
-FETALCLIP_CONFIG_PATH = Path(
-    r"G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main5\FetalCLIP_config.json"
-)
-FETALCLIP_WEIGHT_PATH = Path(
-    r"G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main5\FetalCLIP_weights.pt"
-)
+FETALCLIP_CONFIG_PATH = PROJECT_ROOT / "FetalCLIP_config.json"
+FETALCLIP_WEIGHT_PATH = PROJECT_ROOT / "FetalCLIP_weights.pt"
 FETALCLIP_MODEL_NAME = "FetalCLIP"
 
 # =========================
@@ -83,7 +79,7 @@ USE_POS_WEIGHT = False
 ATTN_HIDDEN_DIM = 256
 GRU_HIDDEN_DIM = 128
 GRU_NUM_LAYERS = 1
-GRU_BIDIRECTIONAL = True
+GRU_BIDIRECTIONAL = False
 
 # FetalCLIP 冻结时，在训练前把图像/文本特征提取到内存，不保存为 .pt 文件。
 # 这样比每个 epoch 重新编码更快，且不改变训练结果。
