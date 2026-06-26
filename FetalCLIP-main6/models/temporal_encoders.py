@@ -415,13 +415,16 @@ class SimpleFusionEncoder(nn.Module):
         B, T, D = x.shape
         device = x.device
 
+        if torch.any(lengths <= 0):
+            raise ValueError("SimpleFusionEncoder expects every sequence to have at least one visit.")
+
         time_index = torch.arange(T, device=device).unsqueeze(0)
         mask = time_index < lengths.unsqueeze(1)
         mask_f = mask.unsqueeze(-1).float()
 
         mean_feat = (x * mask_f).sum(dim=1) / lengths.clamp(min=1).unsqueeze(1).float()
 
-        neg_inf = torch.finfo(x.dtype).min
+        neg_inf = -1.0e4
         max_input = x.masked_fill(~mask.unsqueeze(-1), neg_inf)
         max_feat = max_input.max(dim=1).values
 
@@ -430,6 +433,7 @@ class SimpleFusionEncoder(nn.Module):
         last_feat = x[batch_idx, last_idx, :]
 
         fused = torch.cat([mean_feat, max_feat, last_feat], dim=1)
+        fused = torch.nan_to_num(fused, nan=0.0, posinf=1.0e4, neginf=-1.0e4)
         return self.proj(fused)
 
 
