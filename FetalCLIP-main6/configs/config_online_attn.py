@@ -16,7 +16,7 @@ VISIT_FUSION_TYPE = "film_gated_multimodal"
 FUSION_HIDDEN_DIM = None
 
 TEMPORAL_BACKBONE = "psalm_grud"
-#contiformer / ca_grud / gru /psalm_grud
+# simple_fusion / gru / ca_grud / psalm_grud / contiformer
 
 
 # =========================

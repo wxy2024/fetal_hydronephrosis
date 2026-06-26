@@ -394,6 +394,45 @@ class PSALMGRUDEncoder(nn.Module):
         return h_fw
 
 
+class SimpleFusionEncoder(nn.Module):
+    def __init__(
+        self,
+        input_dim,
+        hidden_dim=128,
+        dropout=0.3,
+    ):
+        super().__init__()
+
+        self.output_dim = hidden_dim
+        self.proj = nn.Sequential(
+            nn.LayerNorm(input_dim * 3),
+            nn.Linear(input_dim * 3, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+        )
+
+    def forward(self, x, lengths, delta=None, img_seq=None):
+        B, T, D = x.shape
+        device = x.device
+
+        time_index = torch.arange(T, device=device).unsqueeze(0)
+        mask = time_index < lengths.unsqueeze(1)
+        mask_f = mask.unsqueeze(-1).float()
+
+        mean_feat = (x * mask_f).sum(dim=1) / lengths.clamp(min=1).unsqueeze(1).float()
+
+        neg_inf = torch.finfo(x.dtype).min
+        max_input = x.masked_fill(~mask.unsqueeze(-1), neg_inf)
+        max_feat = max_input.max(dim=1).values
+
+        last_idx = (lengths - 1).clamp(min=0)
+        batch_idx = torch.arange(B, device=device)
+        last_feat = x[batch_idx, last_idx, :]
+
+        fused = torch.cat([mean_feat, max_feat, last_feat], dim=1)
+        return self.proj(fused)
+
+
 def build_temporal_encoder(
     temporal_backbone,
     input_dim,
@@ -404,6 +443,13 @@ def build_temporal_encoder(
     img_dim=None,
 ):
     name = temporal_backbone.lower()
+
+    if name in ["simple_fusion", "simple-fusion", "simple"]:
+        return SimpleFusionEncoder(
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            dropout=dropout,
+        )
 
     if name == "gru":
         return GRUEncoder(
