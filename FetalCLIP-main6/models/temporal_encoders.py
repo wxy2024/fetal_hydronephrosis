@@ -921,6 +921,126 @@ class TriPGGRUEncoder(nn.Module):
         return last_valid_h
 
 
+class LatentRiskGRUCell(nn.Module):
+    """
+    Latent Risk-Guided GRU cell.
+
+    Each visit receives the previous latent risk score in addition to the visit
+    representation and temporal context, then predicts the current risk score.
+    """
+
+    def __init__(self, input_dim, hidden_dim, dropout=0.3):
+        super().__init__()
+        self.context_proj = nn.Sequential(
+            nn.LayerNorm(input_dim + 3),
+            nn.Linear(input_dim + 3, input_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+        )
+        self.gru_cell = nn.GRUCell(input_dim, hidden_dim)
+        self.risk_head = nn.Sequential(
+            nn.LayerNorm(hidden_dim + input_dim + 3),
+            nn.Linear(hidden_dim + input_dim + 3, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, 1),
+        )
+
+    def forward(self, x_t, h_prev, prev_score, delta_t, phase_t):
+        delta_t = torch.clamp(delta_t, min=0.0)
+        phase_t = torch.clamp(phase_t, min=0.0, max=1.0)
+        prev_score = torch.clamp(prev_score, min=0.0, max=1.0)
+
+        scalar_context = torch.stack(
+            [
+                prev_score,
+                delta_t,
+                phase_t,
+            ],
+            dim=-1,
+        )
+        x_aug = self.context_proj(torch.cat([x_t, scalar_context], dim=-1))
+        h_t = self.gru_cell(x_aug, h_prev)
+
+        risk_input = torch.cat([h_t, x_t, scalar_context], dim=-1)
+        risk_logit = self.risk_head(risk_input).squeeze(-1)
+        risk_score = torch.sigmoid(risk_logit)
+        return h_t, risk_logit, risk_score
+
+
+class LatentRiskGRUEncoder(nn.Module):
+    """
+    Latent Risk-Guided GRU.
+
+    The encoder is forward-only. It initializes the previous visit risk as 0.5,
+    recursively predicts a visit-level risk score, and returns the final visit
+    risk logit directly for BCE supervision.
+    """
+
+    direct_logit = True
+
+    def __init__(
+        self,
+        input_dim,
+        hidden_dim=128,
+        num_layers=1,
+        dropout=0.3,
+        bidirectional=False,
+        img_dim=None,
+    ):
+        super().__init__()
+
+        if num_layers != 1:
+            raise ValueError("LatentRiskGRUEncoder currently supports num_layers=1.")
+
+        self.hidden_dim = hidden_dim
+        self.output_dim = 1
+        self.cell = LatentRiskGRUCell(input_dim, hidden_dim, dropout)
+
+    def forward(self, x, lengths, delta=None, img_seq=None, phase_seq=None):
+        if delta is None:
+            raise ValueError("LatentRiskGRUEncoder requires delta.")
+
+        if phase_seq is None:
+            phase_seq = torch.zeros(
+                x.shape[:2],
+                dtype=torch.float32,
+                device=x.device,
+            )
+
+        B, T, _ = x.shape
+        device = x.device
+        h = torch.zeros(B, self.hidden_dim, device=device)
+        prev_score = torch.full(
+            (B,),
+            0.5,
+            dtype=torch.float32,
+            device=device,
+        )
+        last_risk_logit = torch.zeros(B, dtype=torch.float32, device=device)
+
+        for t in range(T):
+            active = lengths > t
+            if not active.any():
+                continue
+
+            h_new, risk_logit, risk_score = self.cell(
+                x_t=x[:, t, :],
+                h_prev=h,
+                prev_score=prev_score,
+                delta_t=delta[:, t],
+                phase_t=phase_seq[:, t],
+            )
+
+            h = torch.where(active.unsqueeze(1), h_new, h)
+            prev_score = torch.where(active, risk_score, prev_score)
+
+            is_last = lengths == (t + 1)
+            last_risk_logit = torch.where(is_last, risk_logit, last_risk_logit)
+
+        return last_risk_logit.unsqueeze(-1)
+
+
 class SimpleFusionEncoder(nn.Module):
     def __init__(
         self,
@@ -1039,6 +1159,22 @@ def build_temporal_encoder(
         "progression-gated-gru",
     ]:
         return TriPGGRUEncoder(
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            num_layers=num_layers,
+            dropout=dropout,
+            bidirectional=False,
+            img_dim=img_dim,
+        )
+
+    if name in [
+        "risk_gru",
+        "risk-gru",
+        "lrg_gru",
+        "lrg-gru",
+        "latent_risk_gru",
+    ]:
+        return LatentRiskGRUEncoder(
             input_dim=input_dim,
             hidden_dim=hidden_dim,
             num_layers=num_layers,

@@ -109,14 +109,17 @@ class ModularGRUSideClassifier(nn.Module):
 
 
 
-        self.classifier = nn.Sequential(
-            nn.LayerNorm(gru_out_dim),
-            nn.Dropout(dropout),
-            nn.Linear(gru_out_dim, 64),
-            nn.ReLU(inplace=True),
-            nn.Dropout(dropout),
-            nn.Linear(64, 1),
-        )
+        if getattr(self.temporal_encoder, "direct_logit", False):
+            self.classifier = nn.Identity()
+        else:
+            self.classifier = nn.Sequential(
+                nn.LayerNorm(gru_out_dim),
+                nn.Dropout(dropout),
+                nn.Linear(gru_out_dim, 64),
+                nn.ReLU(inplace=True),
+                nn.Dropout(dropout),
+                nn.Linear(64, 1),
+            )
 
     def _tensor_to_device(
         self,
