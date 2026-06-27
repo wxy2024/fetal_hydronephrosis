@@ -576,6 +576,229 @@ class BiTGRUEncoder(nn.Module):
         return h_fw
 
 
+class TriPGGRUCell(nn.Module):
+    """
+    Tri-state Progression-Gated GRU cell.
+
+    The cell explicitly compares the current visit with the previous visit,
+    estimates latent progression states, and uses irregular time intervals to
+    control hidden-state decay and update.
+    """
+
+    def __init__(
+        self,
+        input_dim,
+        hidden_dim,
+        dropout=0.3,
+        progression_dim=None,
+        eps=1e-6,
+    ):
+        super().__init__()
+
+        if progression_dim is None:
+            progression_dim = input_dim
+
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.eps = eps
+
+        state_in_dim = input_dim * 4 + 3
+        delta_in_dim = input_dim * 2 + 3
+
+        self.progression_state_net = nn.Sequential(
+            nn.LayerNorm(state_in_dim),
+            nn.Linear(state_in_dim, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.GELU(),
+            nn.Linear(hidden_dim // 2, 3),
+        )
+
+        self.progression_embed = nn.Sequential(
+            nn.LayerNorm(delta_in_dim),
+            nn.Linear(delta_in_dim, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, progression_dim),
+        )
+
+        self.embed_to_input = nn.Sequential(
+            nn.LayerNorm(progression_dim),
+            nn.Linear(progression_dim, input_dim),
+            nn.GELU(),
+        )
+
+        self.inject_gate = nn.Sequential(
+            nn.Linear(5, input_dim),
+            nn.Sigmoid(),
+        )
+
+        self.hidden_decay = nn.Linear(4, hidden_dim)
+        self.gru_cell = nn.GRUCell(input_dim, hidden_dim)
+        self.dropout = nn.Dropout(dropout)
+
+    def _gamma(self, feat):
+        return torch.exp(-torch.relu(self.hidden_decay(feat)))
+
+    def forward(self, x_t, x_prev, h_prev, delta_t, phase_t):
+        delta_t = torch.clamp(delta_t, min=0.0)
+        phase_t = torch.clamp(phase_t, min=0.0, max=1.0)
+
+        diff = x_t - x_prev
+        abs_diff = torch.abs(diff)
+        rate = abs_diff / (delta_t.unsqueeze(-1) + 1.0 + self.eps)
+
+        diff_norm = torch.linalg.vector_norm(
+            diff,
+            ord=2,
+            dim=-1,
+        ) / (x_t.shape[-1] ** 0.5)
+        diff_norm = torch.clamp(diff_norm, min=0.0, max=10.0)
+
+        rate_norm = torch.linalg.vector_norm(
+            rate,
+            ord=2,
+            dim=-1,
+        ) / (x_t.shape[-1] ** 0.5)
+        rate_norm = torch.clamp(rate_norm, min=0.0, max=10.0)
+
+        scalar_feat = torch.stack(
+            [
+                delta_t,
+                phase_t,
+                diff_norm,
+            ],
+            dim=-1,
+        )
+
+        state_input = torch.cat(
+            [
+                x_t,
+                x_prev,
+                diff,
+                abs_diff,
+                scalar_feat,
+            ],
+            dim=-1,
+        )
+        state_logits = self.progression_state_net(state_input)
+        state_prob = F.softmax(state_logits, dim=-1)
+
+        delta_input = torch.cat(
+            [
+                diff,
+                abs_diff,
+                torch.stack([delta_t, phase_t, rate_norm], dim=-1),
+            ],
+            dim=-1,
+        )
+        progression = self.embed_to_input(self.progression_embed(delta_input))
+
+        stable_prob = state_prob[:, 0]
+        improve_prob = state_prob[:, 1]
+        worsen_prob = state_prob[:, 2]
+
+        gate_input = torch.stack(
+            [
+                stable_prob,
+                improve_prob,
+                worsen_prob,
+                delta_t,
+                phase_t,
+            ],
+            dim=-1,
+        )
+        inject_gate = self.inject_gate(gate_input)
+        x_aug = x_t + inject_gate * progression
+
+        decay_input = torch.cat(
+            [
+                delta_t.unsqueeze(-1),
+                state_prob,
+            ],
+            dim=-1,
+        )
+        gamma_h = self._gamma(decay_input)
+        h_decay = gamma_h * h_prev
+
+        h_candidate = self.gru_cell(x_aug, h_decay)
+        h_candidate = self.dropout(h_candidate)
+
+        write_strength = (1.0 - stable_prob).unsqueeze(-1)
+        h_t = stable_prob.unsqueeze(-1) * h_decay + write_strength * h_candidate
+        return h_t
+
+
+class TriPGGRUEncoder(nn.Module):
+    """
+    TriPG-GRU: single-direction Tri-state Progression-Gated GRU.
+
+    This encoder is intentionally forward-only because progression is defined as
+    the change from the previous visit to the current visit.
+    """
+
+    def __init__(
+        self,
+        input_dim,
+        hidden_dim=128,
+        num_layers=1,
+        dropout=0.3,
+        bidirectional=False,
+        img_dim=None,
+    ):
+        super().__init__()
+
+        if num_layers != 1:
+            raise ValueError("TriPGGRUEncoder currently supports num_layers=1.")
+
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.output_dim = hidden_dim
+        self.cell = TriPGGRUCell(input_dim, hidden_dim, dropout)
+
+    def forward(self, x, lengths, delta=None, img_seq=None, phase_seq=None):
+        if delta is None:
+            raise ValueError("TriPGGRUEncoder requires delta.")
+
+        if phase_seq is None:
+            phase_seq = torch.zeros(
+                x.shape[:2],
+                dtype=torch.float32,
+                device=x.device,
+            )
+
+        B, T, _ = x.shape
+        device = x.device
+        h = torch.zeros(B, self.hidden_dim, device=device)
+        last_valid_h = h
+        prev_x = x[:, 0, :]
+
+        for t in range(T):
+            active = lengths > t
+            if not active.any():
+                continue
+
+            x_t = x[:, t, :]
+            delta_t = delta[:, t]
+            phase_t = phase_seq[:, t]
+
+            h_new = self.cell(
+                x_t=x_t,
+                x_prev=prev_x,
+                h_prev=h,
+                delta_t=delta_t,
+                phase_t=phase_t,
+            )
+            h = torch.where(active.unsqueeze(1), h_new, h)
+
+            is_last = lengths == (t + 1)
+            last_valid_h = torch.where(is_last.unsqueeze(1), h, last_valid_h)
+            prev_x = torch.where(active.unsqueeze(1), x_t, prev_x)
+
+        return last_valid_h
+
+
 class SimpleFusionEncoder(nn.Module):
     def __init__(
         self,
@@ -673,6 +896,22 @@ def build_temporal_encoder(
             num_layers=num_layers,
             dropout=dropout,
             bidirectional=bidirectional,
+            img_dim=img_dim,
+        )
+
+    if name in [
+        "tripg_gru",
+        "tripg-gru",
+        "tripg",
+        "progression_gru",
+        "progression-gated-gru",
+    ]:
+        return TriPGGRUEncoder(
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            num_layers=num_layers,
+            dropout=dropout,
+            bidirectional=False,
             img_dim=img_dim,
         )
 
