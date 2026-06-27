@@ -807,6 +807,119 @@ class ReliabilityCalibratedConsensusPooling(nn.Module):
         return pooled, image_mask, attn
 
 
+class VarianceCalibratedMeanPooling(nn.Module):
+    """
+    Variance-Calibrated Mean Pooling.
+
+    This module keeps image-level averaging unchanged and only learns a
+    channel-wise correction from the intra-visit feature distribution. The last
+    projection is zero-initialized, so the module starts as exact mean pooling.
+    """
+
+    def __init__(
+        self,
+        feature_dim: int,
+        hidden_dim: int = 256,
+        correction_scale: float = 0.1,
+        eps: float = 1e-6,
+    ):
+        super().__init__()
+
+        self.feature_dim = feature_dim
+        self.correction_scale = correction_scale
+        self.eps = eps
+
+        stat_dim = feature_dim * 4
+        hidden_dim = max(hidden_dim, 32)
+
+        self.stat_norm = nn.LayerNorm(stat_dim)
+        self.calibrator = nn.Sequential(
+            self.stat_norm,
+            nn.Linear(stat_dim, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(0.1),
+            nn.Linear(hidden_dim, feature_dim),
+        )
+
+        final_linear = self.calibrator[-1]
+        nn.init.zeros_(final_linear.weight)
+        nn.init.zeros_(final_linear.bias)
+
+    def forward(
+        self,
+        image_features: Optional[torch.Tensor],
+        query_feat: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        if image_features is not None and image_features.numel() > 0:
+            device = image_features.device
+        elif query_feat is not None:
+            device = query_feat.device
+        else:
+            device = next(self.parameters()).device
+
+        if image_features is None or image_features.numel() == 0:
+            pooled = torch.zeros(
+                self.feature_dim,
+                dtype=torch.float32,
+                device=device,
+            )
+            image_mask = torch.tensor(
+                [0.0],
+                dtype=torch.float32,
+                device=device,
+            )
+            attn = torch.empty(
+                0,
+                dtype=torch.float32,
+                device=device,
+            )
+            return pooled, image_mask, attn
+
+        image_features = image_features.float().to(device)  # [N, D]
+        n = image_features.shape[0]
+
+        mean_feat = image_features.mean(dim=0)
+        attn = torch.ones(
+            n,
+            dtype=torch.float32,
+            device=device,
+        ) / max(n, 1)
+
+        if n == 1:
+            image_mask = torch.tensor(
+                [1.0],
+                dtype=torch.float32,
+                device=device,
+            )
+            return mean_feat, image_mask, attn
+
+        centered = image_features - mean_feat.unsqueeze(0)
+        std_feat = torch.sqrt(centered.pow(2).mean(dim=0) + self.eps)
+        max_feat = image_features.max(dim=0).values
+        min_feat = image_features.min(dim=0).values
+
+        stats = torch.cat(
+            [
+                mean_feat,
+                std_feat,
+                max_feat - mean_feat,
+                mean_feat - min_feat,
+            ],
+            dim=0,
+        )
+
+        correction = torch.tanh(self.calibrator(stats))
+        pooled = mean_feat + self.correction_scale * std_feat * correction
+
+        image_mask = torch.tensor(
+            [1.0],
+            dtype=torch.float32,
+            device=device,
+        )
+
+        return pooled, image_mask, attn
+
+
 def build_image_pooling(
     pooling_type: str,
     feature_dim: int,
@@ -821,6 +934,7 @@ def build_image_pooling(
         gated_mil
         sra_gated_mil
         rcc_pooling
+        vcm_pooling
     """
 
     pooling_type = pooling_type.lower()
@@ -876,6 +990,17 @@ def build_image_pooling(
         "reliability_consensus",
     ]:
         return ReliabilityCalibratedConsensusPooling(
+            feature_dim=feature_dim,
+            hidden_dim=hidden_dim,
+        )
+
+    if pooling_type in [
+        "vcm_pooling",
+        "vcm",
+        "variance_calibrated_mean",
+        "stat_calibrated_mean",
+    ]:
+        return VarianceCalibratedMeanPooling(
             feature_dim=feature_dim,
             hidden_dim=hidden_dim,
         )
