@@ -7,7 +7,7 @@ from pathlib import Path
 
 # 图像聚合方式：
 # mean / attention / gated_mil / text_cross_attention / sra_gated_mil / rrs_gated_mil / rcc_pooling / vcm_pooling / pgs_pooling
-IMAGE_POOLING_TYPE = "vcm_pooling"
+IMAGE_POOLING_TYPE = "pgs_pooling"
 
 # 检查级融合方式：
 # direct_concat / gated_multimodal / film_gated_multimodal / transformer_token
