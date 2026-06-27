@@ -920,6 +920,134 @@ class VarianceCalibratedMeanPooling(nn.Module):
         return pooled, image_mask, attn
 
 
+class PrototypeGuidedSetPooling(nn.Module):
+    """
+    Prototype-Guided Set Pooling.
+
+    Learnable diagnostic prototypes query an unordered set of ultrasound image
+    features through cross-attention. Each prototype retrieves one evidence
+    token, then a lightweight prototype self-attention block and readout head
+    produce the visit-level image representation.
+    """
+
+    def __init__(
+        self,
+        feature_dim: int,
+        hidden_dim: int = 256,
+        num_prototypes: int = 4,
+        num_heads: int = 4,
+        dropout: float = 0.1,
+    ):
+        super().__init__()
+
+        if feature_dim % num_heads != 0:
+            raise ValueError(
+                f"feature_dim={feature_dim} must be divisible by num_heads={num_heads}."
+            )
+
+        self.feature_dim = feature_dim
+        self.num_prototypes = num_prototypes
+
+        self.input_norm = nn.LayerNorm(feature_dim)
+        self.prototype_tokens = nn.Parameter(
+            torch.empty(num_prototypes, feature_dim)
+        )
+
+        self.cross_attention = nn.MultiheadAttention(
+            embed_dim=feature_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            batch_first=True,
+        )
+
+        self.prototype_encoder = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(
+                d_model=feature_dim,
+                nhead=num_heads,
+                dim_feedforward=max(hidden_dim * 2, feature_dim),
+                dropout=dropout,
+                activation="gelu",
+                batch_first=True,
+                norm_first=True,
+            ),
+            num_layers=1,
+        )
+
+        self.readout = nn.Sequential(
+            nn.LayerNorm(feature_dim),
+            nn.Linear(feature_dim, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, 1),
+        )
+
+        self.output_proj = nn.Sequential(
+            nn.LayerNorm(feature_dim),
+            nn.Linear(feature_dim, feature_dim),
+            nn.GELU(),
+        )
+
+        nn.init.trunc_normal_(self.prototype_tokens, std=0.02)
+
+    def forward(
+        self,
+        image_features: Optional[torch.Tensor],
+        query_feat: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        device = next(self.parameters()).device
+
+        if image_features is None or image_features.numel() == 0:
+            pooled = torch.zeros(
+                self.feature_dim,
+                dtype=torch.float32,
+                device=device,
+            )
+            image_mask = torch.tensor(
+                [0.0],
+                dtype=torch.float32,
+                device=device,
+            )
+            attn = torch.empty(
+                0,
+                dtype=torch.float32,
+                device=device,
+            )
+            return pooled, image_mask, attn
+
+        image_features = image_features.float().to(device)  # [N, D]
+        image_tokens = self.input_norm(image_features).unsqueeze(0)  # [1, N, D]
+        prototype_queries = self.prototype_tokens.unsqueeze(0)  # [1, K, D]
+
+        evidence_tokens, image_attn = self.cross_attention(
+            query=prototype_queries,
+            key=image_tokens,
+            value=image_tokens,
+            need_weights=True,
+            average_attn_weights=False,
+        )
+
+        evidence_tokens = self.prototype_encoder(evidence_tokens)
+
+        prototype_scores = self.readout(evidence_tokens).squeeze(-1)  # [1, K]
+        prototype_weights = F.softmax(prototype_scores, dim=-1).unsqueeze(-1)
+        pooled = torch.sum(evidence_tokens * prototype_weights, dim=1).squeeze(0)
+        pooled = self.output_proj(pooled)
+
+        # image_attn: [1, heads, K, N]. Convert it to one interpretable weight per image.
+        image_attn = image_attn.mean(dim=1).squeeze(0)  # [K, N]
+        readout_weights = prototype_weights.squeeze(0).squeeze(-1).detach()  # [K]
+        attn = torch.sum(image_attn * readout_weights.unsqueeze(-1), dim=0)
+        attn = attn / attn.sum().clamp_min(1e-6)
+
+        image_mask = torch.tensor(
+            [1.0],
+            dtype=torch.float32,
+            device=device,
+        )
+
+        return pooled, image_mask, attn
+
+
 def build_image_pooling(
     pooling_type: str,
     feature_dim: int,
@@ -935,6 +1063,7 @@ def build_image_pooling(
         sra_gated_mil
         rcc_pooling
         vcm_pooling
+        pgs_pooling
     """
 
     pooling_type = pooling_type.lower()
@@ -1003,6 +1132,20 @@ def build_image_pooling(
         return VarianceCalibratedMeanPooling(
             feature_dim=feature_dim,
             hidden_dim=hidden_dim,
+        )
+
+    if pooling_type in [
+        "pgs_pooling",
+        "pgs",
+        "prototype_guided_set",
+        "prototype_set",
+        "prototype_set_pooling",
+    ]:
+        return PrototypeGuidedSetPooling(
+            feature_dim=feature_dim,
+            hidden_dim=hidden_dim,
+            num_prototypes=4,
+            num_heads=4,
         )
 
     raise ValueError(f"Unknown image pooling type: {pooling_type}")
