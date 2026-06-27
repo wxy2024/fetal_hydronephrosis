@@ -1041,6 +1041,137 @@ class LatentRiskGRUEncoder(nn.Module):
         return last_risk_logit.unsqueeze(-1)
 
 
+class DepthwiseSeparableTemporalConv(nn.Module):
+    def __init__(self, d_model, kernel_size=3, dropout=0.3):
+        super().__init__()
+        padding = kernel_size // 2
+        self.depthwise = nn.Conv1d(
+            d_model,
+            d_model,
+            kernel_size=kernel_size,
+            padding=padding,
+            groups=d_model,
+        )
+        self.pointwise = nn.Conv1d(d_model, d_model, kernel_size=1)
+        self.norm = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, mask):
+        # x: [B, T, D], mask: [B, T]
+        x_masked = x * mask.unsqueeze(-1).float()
+        y = self.depthwise(x_masked.transpose(1, 2))
+        y = self.pointwise(y).transpose(1, 2)
+        y = self.dropout(F.gelu(y))
+        y = y * mask.unsqueeze(-1).float()
+        return self.norm(x + y)
+
+
+class TDConvGRUEncoder(nn.Module):
+    """
+    Temporal-Difference Convolutional GRU.
+
+    A lightweight multi-scale temporal convolution first captures local
+    visit-to-visit patterns under irregular sampling, then a BiGRU models the
+    full longitudinal context.
+    """
+
+    def __init__(
+        self,
+        input_dim,
+        hidden_dim=128,
+        num_layers=1,
+        dropout=0.3,
+        bidirectional=True,
+        img_dim=None,
+        d_model=512,
+    ):
+        super().__init__()
+
+        self.input_proj = nn.Sequential(
+            nn.LayerNorm(input_dim),
+            nn.Linear(input_dim, d_model),
+            nn.GELU(),
+            nn.Dropout(dropout),
+        )
+
+        self.time_phase_proj = nn.Sequential(
+            nn.Linear(2, d_model),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model, d_model),
+        )
+
+        self.short_conv = DepthwiseSeparableTemporalConv(
+            d_model=d_model,
+            kernel_size=3,
+            dropout=dropout,
+        )
+        self.mid_conv = DepthwiseSeparableTemporalConv(
+            d_model=d_model,
+            kernel_size=5,
+            dropout=dropout,
+        )
+
+        self.local_fusion = nn.Sequential(
+            nn.LayerNorm(d_model * 3),
+            nn.Linear(d_model * 3, d_model),
+            nn.GELU(),
+            nn.Dropout(dropout),
+        )
+
+        self.gru = nn.GRU(
+            input_size=d_model,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=dropout if num_layers > 1 else 0.0,
+            bidirectional=bidirectional,
+        )
+
+        self.output_dim = hidden_dim * (2 if bidirectional else 1)
+
+    def forward(self, x, lengths, delta=None, img_seq=None, phase_seq=None):
+        B, T, _ = x.shape
+        device = x.device
+
+        if delta is None:
+            delta = torch.zeros(B, T, dtype=torch.float32, device=device)
+
+        if phase_seq is None:
+            phase_seq = torch.zeros(B, T, dtype=torch.float32, device=device)
+
+        time_index = torch.arange(T, device=device).unsqueeze(0)
+        mask = time_index < lengths.unsqueeze(1)
+
+        delta = torch.clamp(delta, min=0.0)
+        phase_seq = torch.clamp(phase_seq, min=0.0, max=1.0)
+        time_phase = torch.stack([delta, phase_seq], dim=-1)
+
+        base = self.input_proj(x)
+        conditioned = base + self.time_phase_proj(time_phase)
+        conditioned = conditioned * mask.unsqueeze(-1).float()
+
+        short_feat = self.short_conv(conditioned, mask)
+        mid_feat = self.mid_conv(conditioned, mask)
+        enhanced = self.local_fusion(
+            torch.cat([conditioned, short_feat, mid_feat], dim=-1)
+        )
+        enhanced = enhanced * mask.unsqueeze(-1).float()
+
+        packed = pack_padded_sequence(
+            enhanced,
+            lengths.cpu(),
+            batch_first=True,
+            enforce_sorted=False,
+        )
+        _, h_n = self.gru(packed)
+
+        if self.gru.bidirectional:
+            return torch.cat([h_n[-2], h_n[-1]], dim=1)
+
+        return h_n[-1]
+
+
 class SimpleFusionEncoder(nn.Module):
     def __init__(
         self,
@@ -1181,6 +1312,22 @@ def build_temporal_encoder(
             dropout=dropout,
             bidirectional=False,
             img_dim=img_dim,
+        )
+
+    if name in [
+        "td_conv_gru",
+        "td-conv-gru",
+        "tdconvgru",
+        "temporal_difference_conv_gru",
+    ]:
+        return TDConvGRUEncoder(
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            num_layers=num_layers,
+            dropout=dropout,
+            bidirectional=bidirectional,
+            img_dim=img_dim,
+            d_model=512,
         )
 
     raise ValueError(f"Unknown TEMPORAL_BACKBONE: {temporal_backbone}")
