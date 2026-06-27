@@ -15,7 +15,7 @@ VISIT_FUSION_TYPE = "film_gated_multimodal"
 
 FUSION_HIDDEN_DIM = None
 
-TEMPORAL_BACKBONE = "psalm_grud"
+TEMPORAL_BACKBONE = "gru"
 # simple_fusion / gru / ca_grud / psalm_grud / contiformer
 
 
@@ -28,7 +28,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 16
+EXP_ID = 21
 
 
 RESULT_DIR = OUTPUT_ROOT / (
@@ -79,7 +79,7 @@ USE_POS_WEIGHT = False
 ATTN_HIDDEN_DIM = 256
 GRU_HIDDEN_DIM = 128
 GRU_NUM_LAYERS = 1
-GRU_BIDIRECTIONAL = False
+GRU_BIDIRECTIONAL = True
 
 # FetalCLIP 冻结时，在训练前把图像/文本特征提取到内存，不保存为 .pt 文件。
 # 这样比每个 epoch 重新编码更快，且不改变训练结果。
