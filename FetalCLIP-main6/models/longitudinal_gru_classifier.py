@@ -146,6 +146,7 @@ class ModularGRUSideClassifier(nn.Module):
         visit_features = []
         img_features_for_temporal = []
         interval_features = []
+        phase_features = []
         attention_records = []
 
         for visit, exam_date in zip(visits, dates):
@@ -218,6 +219,7 @@ class ModularGRUSideClassifier(nn.Module):
             visit_features.append(visit_feat)
             img_features_for_temporal.append(img_feat)
             interval_features.append(interval_days / 100.0)
+            phase_features.append(phase_flag)
 
             if return_attention:
                 image_names = [
@@ -247,8 +249,13 @@ class ModularGRUSideClassifier(nn.Module):
             dtype=torch.float32,
             device=device,
         )
+        phase_seq = torch.tensor(
+            phase_features,
+            dtype=torch.float32,
+            device=device,
+        )
 
-        return seq, delta_seq, img_seq, attention_records
+        return seq, delta_seq, img_seq, phase_seq, attention_records
 
     def forward(
         self,
@@ -260,16 +267,18 @@ class ModularGRUSideClassifier(nn.Module):
         sequences = []
         delta_sequences = []
         img_sequences = []
+        phase_sequences = []
         attention_batch = []
 
         for sample in batch:
-            seq, delta_seq, img_seq, attn_records = self._build_one_sequence(
+            seq, delta_seq, img_seq, phase_seq, attn_records = self._build_one_sequence(
                 sample,
                 return_attention=return_attention,
             )
             sequences.append(seq)
             delta_sequences.append(delta_seq)
             img_sequences.append(img_seq)
+            phase_sequences.append(phase_seq)
             attention_batch.append(attn_records)
 
 
@@ -305,17 +314,26 @@ class ModularGRUSideClassifier(nn.Module):
             device=device,
         )
 
+        padded_phase = torch.zeros(
+            batch_size,
+            max_len,
+            dtype=torch.float32,
+            device=device,
+        )
+
         for i, seq in enumerate(sequences):
             L = seq.shape[0]
             padded[i, :L, :] = seq
             padded_delta[i, :L] = delta_sequences[i]
             padded_img[i, :L, :] = img_sequences[i]
+            padded_phase[i, :L] = phase_sequences[i]
 
         h_last = self.temporal_encoder(
             padded,
             lengths=lengths,
             delta=padded_delta,
             img_seq=padded_img,
+            phase_seq=padded_phase,
         )
 
         logits = self.classifier(h_last).squeeze(-1)

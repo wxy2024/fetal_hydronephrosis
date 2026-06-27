@@ -25,7 +25,7 @@ class GRUEncoder(nn.Module):
         )
         self.output_dim = hidden_dim * (2 if bidirectional else 1)
 
-    def forward(self, x, lengths, delta=None, img_seq=None):
+    def forward(self, x, lengths, delta=None, img_seq=None, phase_seq=None):
         packed = pack_padded_sequence(
             x,
             lengths.cpu(),
@@ -144,7 +144,7 @@ class CAGRUEncoder(nn.Module):
 
         return last_valid_h
 
-    def forward(self, x, lengths, delta=None, img_seq=None):
+    def forward(self, x, lengths, delta=None, img_seq=None, phase_seq=None):
         if delta is None or img_seq is None:
             raise ValueError("CAGRUEncoder 需要 delta 和 img_seq。")
 
@@ -371,7 +371,7 @@ class PSALMGRUDEncoder(nn.Module):
 
         return last_valid_h
 
-    def forward(self, x, lengths, delta=None, img_seq=None):
+    def forward(self, x, lengths, delta=None, img_seq=None, phase_seq=None):
         if delta is None:
             raise ValueError("PSALMGRUDEncoder 需要 delta。")
 
@@ -387,6 +387,188 @@ class PSALMGRUDEncoder(nn.Module):
                 x=x,
                 lengths=lengths,
                 delta=delta,
+                reverse=True,
+            )
+            return torch.cat([h_fw, h_bw], dim=1)
+
+        return h_fw
+
+
+class BiTGRUCell(nn.Module):
+    """
+    Bidirectional Time-aware GRU cell.
+
+    The cell uses irregular inter-visit interval, prenatal/postnatal phase, and
+    adjacent representation change to control hidden-state decay and update.
+    """
+
+    def __init__(self, input_dim, hidden_dim, dropout=0.3):
+        super().__init__()
+        self.hidden_dim = hidden_dim
+        self.x_mean = nn.Parameter(torch.zeros(input_dim))
+
+        self.input_decay = nn.Linear(2, input_dim)
+        self.hidden_decay = nn.Linear(2, hidden_dim)
+
+        self.update_gate = nn.Sequential(
+            nn.Linear(3, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.Sigmoid(),
+        )
+
+        self.phase_gate = nn.Sequential(
+            nn.Linear(2, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.GELU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.Sigmoid(),
+        )
+
+        self.gru_cell = nn.GRUCell(input_dim, hidden_dim)
+        self.dropout = nn.Dropout(dropout)
+
+    def _gamma(self, layer, decay_feat):
+        return torch.exp(-torch.relu(layer(decay_feat)))
+
+    def forward(self, x_t, x_prev, h_prev, delta_t, phase_t):
+        delta_t = torch.clamp(delta_t, min=0.0)
+        phase_t = torch.clamp(phase_t, min=0.0, max=1.0)
+
+        change = torch.linalg.vector_norm(
+            x_t - x_prev,
+            ord=2,
+            dim=-1,
+        ) / (x_t.shape[-1] ** 0.5)
+        change = torch.clamp(change, min=0.0, max=10.0)
+
+        decay_feat = torch.stack([delta_t, phase_t], dim=-1)
+        gamma_x = self._gamma(self.input_decay, decay_feat)
+        gamma_h = self._gamma(self.hidden_decay, decay_feat)
+
+        x_hat = gamma_x * x_t + (1.0 - gamma_x) * self.x_mean.unsqueeze(0)
+        h_decay = gamma_h * h_prev
+
+        h_candidate = self.gru_cell(x_hat, h_decay)
+        h_candidate = self.dropout(h_candidate)
+
+        update_feat = torch.stack([delta_t, phase_t, change], dim=-1)
+        update_gate = self.update_gate(update_feat)
+
+        phase_feat = torch.stack([phase_t, delta_t], dim=-1)
+        phase_gate = self.phase_gate(phase_feat)
+
+        h_update = update_gate * h_candidate + (1.0 - update_gate) * h_decay
+        h_t = phase_gate * h_update + (1.0 - phase_gate) * h_prev
+        return h_t
+
+
+class BiTGRUEncoder(nn.Module):
+    """
+    BiT-GRU: Bidirectional Time-aware Gated Residual Unit.
+
+    It keeps the strong bidirectional GRU inductive bias, but explicitly models
+    irregular sampling intervals and prenatal/postnatal phase transitions.
+    """
+
+    def __init__(
+        self,
+        input_dim,
+        hidden_dim=128,
+        num_layers=1,
+        dropout=0.3,
+        bidirectional=True,
+        img_dim=None,
+    ):
+        super().__init__()
+
+        if num_layers != 1:
+            raise ValueError("BiTGRUEncoder currently supports num_layers=1.")
+
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.bidirectional = bidirectional
+
+        self.fw_cell = BiTGRUCell(input_dim, hidden_dim, dropout)
+        if bidirectional:
+            self.bw_cell = BiTGRUCell(input_dim, hidden_dim, dropout)
+
+        self.output_dim = hidden_dim * (2 if bidirectional else 1)
+
+    def _direction_delta(self, delta, t, reverse, max_len):
+        if not reverse:
+            return delta[:, t]
+        if t + 1 < max_len:
+            return delta[:, t + 1]
+        return torch.zeros_like(delta[:, t])
+
+    def _run_one_direction(self, x, lengths, delta, phase_seq, reverse=False):
+        B, T, _ = x.shape
+        device = x.device
+
+        cell = self.bw_cell if reverse else self.fw_cell
+        h = torch.zeros(B, self.hidden_dim, device=device)
+        last_valid_h = h
+
+        time_range = range(T - 1, -1, -1) if reverse else range(T)
+        prev_x = x[:, T - 1, :] if reverse else x[:, 0, :]
+
+        for t in time_range:
+            active = lengths > t
+            if not active.any():
+                continue
+
+            x_t = x[:, t, :]
+            delta_t = self._direction_delta(delta, t, reverse, T)
+            phase_t = phase_seq[:, t]
+
+            h_new = cell(
+                x_t=x_t,
+                x_prev=prev_x,
+                h_prev=h,
+                delta_t=delta_t,
+                phase_t=phase_t,
+            )
+            h = torch.where(active.unsqueeze(1), h_new, h)
+
+            if not reverse:
+                is_last = lengths == (t + 1)
+                last_valid_h = torch.where(is_last.unsqueeze(1), h, last_valid_h)
+
+            prev_x = x_t
+
+        if reverse:
+            return h
+
+        return last_valid_h
+
+    def forward(self, x, lengths, delta=None, img_seq=None, phase_seq=None):
+        if delta is None:
+            raise ValueError("BiTGRUEncoder requires delta.")
+
+        if phase_seq is None:
+            phase_seq = torch.zeros(
+                x.shape[:2],
+                dtype=torch.float32,
+                device=x.device,
+            )
+
+        h_fw = self._run_one_direction(
+            x=x,
+            lengths=lengths,
+            delta=delta,
+            phase_seq=phase_seq,
+            reverse=False,
+        )
+
+        if self.bidirectional:
+            h_bw = self._run_one_direction(
+                x=x,
+                lengths=lengths,
+                delta=delta,
+                phase_seq=phase_seq,
                 reverse=True,
             )
             return torch.cat([h_fw, h_bw], dim=1)
@@ -411,7 +593,7 @@ class SimpleFusionEncoder(nn.Module):
             nn.Dropout(dropout),
         )
 
-    def forward(self, x, lengths, delta=None, img_seq=None):
+    def forward(self, x, lengths, delta=None, img_seq=None, phase_seq=None):
         B, T, D = x.shape
         device = x.device
 
@@ -476,6 +658,16 @@ def build_temporal_encoder(
 
     if name in ["psalm_grud", "psalm-grud", "psalm", "psa_grud"]:
         return PSALMGRUDEncoder(
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            num_layers=num_layers,
+            dropout=dropout,
+            bidirectional=bidirectional,
+            img_dim=img_dim,
+        )
+
+    if name in ["bit_gru", "bit-gru", "bitgru", "time_aware_gru", "time-aware-gru"]:
+        return BiTGRUEncoder(
             input_dim=input_dim,
             hidden_dim=hidden_dim,
             num_layers=num_layers,
