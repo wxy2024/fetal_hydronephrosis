@@ -6,7 +6,7 @@ from pathlib import Path
 # =========================
 
 # 图像聚合方式：
-# mean / attention / gated_mil / text_cross_attention / sra_gated_mil / rrs_gated_mil
+# mean / attention / gated_mil / text_cross_attention / sra_gated_mil / rrs_gated_mil / rcc_pooling
 IMAGE_POOLING_TYPE = "rrs_gated_mil"
 
 # 检查级融合方式：

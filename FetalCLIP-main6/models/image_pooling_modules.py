@@ -664,6 +664,149 @@ class MeanImagePooling(nn.Module):
         return pooled, image_mask, attn
 
 
+class ReliabilityCalibratedConsensusPooling(nn.Module):
+    """
+    Reliability-Calibrated Consensus Pooling.
+
+    The module keeps mean pooling as a stable consensus baseline, then learns a
+    small residual correction from per-image reliability, consensus consistency,
+    and complementary residual evidence. It does not use text features.
+    """
+
+    def __init__(
+        self,
+        feature_dim: int,
+        hidden_dim: int = 256,
+        initial_residual_ratio: float = 0.5,
+        eps: float = 1e-6,
+    ):
+        super().__init__()
+
+        self.feature_dim = feature_dim
+        self.eps = eps
+
+        self.norm = nn.LayerNorm(feature_dim)
+        self.score_net = nn.Sequential(
+            nn.LayerNorm(feature_dim * 4 + 3),
+            nn.Linear(feature_dim * 4 + 3, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(0.1),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.GELU(),
+            nn.Linear(hidden_dim // 2, 1),
+        )
+
+        ratio = min(max(initial_residual_ratio, 1e-4), 1.0 - 1e-4)
+        logit = torch.logit(torch.tensor(ratio, dtype=torch.float32))
+        self.residual_logit = nn.Parameter(logit)
+
+    def forward(
+        self,
+        image_features: Optional[torch.Tensor],
+        query_feat: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        device = next(self.parameters()).device
+
+        if image_features is None or image_features.numel() == 0:
+            pooled = torch.zeros(
+                self.feature_dim,
+                dtype=torch.float32,
+                device=device,
+            )
+            image_mask = torch.tensor(
+                [0.0],
+                dtype=torch.float32,
+                device=device,
+            )
+            attn = torch.empty(
+                0,
+                dtype=torch.float32,
+                device=device,
+            )
+            return pooled, image_mask, attn
+
+        image_features = image_features.float().to(device)  # [N, D]
+
+        if image_features.shape[0] == 1:
+            pooled = image_features.squeeze(0)
+            image_mask = torch.tensor(
+                [1.0],
+                dtype=torch.float32,
+                device=device,
+            )
+            attn = torch.ones(
+                1,
+                dtype=torch.float32,
+                device=device,
+            )
+            return pooled, image_mask, attn
+
+        consensus = image_features.mean(dim=0)  # [D]
+        x_normed = self.norm(image_features)
+        c_normed = self.norm(consensus).unsqueeze(0).expand_as(x_normed)
+
+        residual = x_normed - c_normed
+        interaction = x_normed * c_normed
+
+        consistency = F.cosine_similarity(
+            image_features,
+            consensus.unsqueeze(0),
+            dim=-1,
+            eps=self.eps,
+        ).unsqueeze(-1)
+
+        residual_norm = torch.linalg.vector_norm(
+            residual,
+            ord=2,
+            dim=-1,
+            keepdim=True,
+        ) / (self.feature_dim ** 0.5)
+
+        pairwise_sim = torch.matmul(
+            F.normalize(image_features, p=2, dim=-1, eps=self.eps),
+            F.normalize(image_features, p=2, dim=-1, eps=self.eps).transpose(0, 1),
+        )
+        n = image_features.shape[0]
+        pairwise_sim = pairwise_sim.masked_fill(
+            torch.eye(n, dtype=torch.bool, device=device),
+            0.0,
+        )
+        redundancy = pairwise_sim.clamp(min=0.0).sum(dim=1, keepdim=True) / max(n - 1, 1)
+        uniqueness = 1.0 - redundancy
+
+        score_input = torch.cat(
+            [
+                x_normed,
+                c_normed,
+                residual,
+                interaction,
+                consistency,
+                residual_norm,
+                uniqueness,
+            ],
+            dim=-1,
+        )
+
+        scores = self.score_net(score_input).squeeze(-1)
+        scores = scores + consistency.squeeze(-1) + 0.25 * uniqueness.squeeze(-1)
+        attn = F.softmax(scores, dim=0)
+
+        calibrated = torch.sum(
+            image_features * attn.unsqueeze(-1),
+            dim=0,
+        )
+        residual_ratio = torch.sigmoid(self.residual_logit)
+        pooled = (1.0 - residual_ratio) * consensus + residual_ratio * calibrated
+
+        image_mask = torch.tensor(
+            [1.0],
+            dtype=torch.float32,
+            device=device,
+        )
+
+        return pooled, image_mask, attn
+
+
 def build_image_pooling(
     pooling_type: str,
     feature_dim: int,
@@ -677,6 +820,7 @@ def build_image_pooling(
         attention
         gated_mil
         sra_gated_mil
+        rcc_pooling
     """
 
     pooling_type = pooling_type.lower()
@@ -723,6 +867,17 @@ def build_image_pooling(
             redundancy_lambda=1.0,
             redundancy_threshold=0.75,
             score_temperature=0.1,
+        )
+
+    if pooling_type in [
+        "rcc_pooling",
+        "rcc",
+        "reliability_calibrated_consensus",
+        "reliability_consensus",
+    ]:
+        return ReliabilityCalibratedConsensusPooling(
+            feature_dim=feature_dim,
+            hidden_dim=hidden_dim,
         )
 
     raise ValueError(f"Unknown image pooling type: {pooling_type}")
