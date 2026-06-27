@@ -40,6 +40,128 @@ class GRUEncoder(nn.Module):
         return h_n[-1]
 
 
+class GRUDCell(nn.Module):
+    """
+    GRU-D cell for irregularly sampled visit sequences.
+
+    Since the visit-level feature is already fused and has no explicit missing
+    mask, this implementation uses inter-visit interval to decay both the input
+    feature and hidden state before a GRUCell update.
+    """
+
+    def __init__(self, input_dim, hidden_dim, dropout=0.3):
+        super().__init__()
+        self.x_mean = nn.Parameter(torch.zeros(input_dim))
+        self.input_decay = nn.Linear(1, input_dim)
+        self.hidden_decay = nn.Linear(1, hidden_dim)
+        self.gru_cell = nn.GRUCell(input_dim, hidden_dim)
+        self.dropout = nn.Dropout(dropout)
+
+    def _gamma(self, layer, delta_t):
+        return torch.exp(-torch.relu(layer(delta_t.unsqueeze(-1))))
+
+    def forward(self, x_t, h_prev, delta_t):
+        delta_t = torch.clamp(delta_t, min=0.0)
+
+        gamma_x = self._gamma(self.input_decay, delta_t)
+        gamma_h = self._gamma(self.hidden_decay, delta_t)
+
+        x_hat = gamma_x * x_t + (1.0 - gamma_x) * self.x_mean.unsqueeze(0)
+        h_hat = gamma_h * h_prev
+
+        h_t = self.gru_cell(x_hat, h_hat)
+        h_t = self.dropout(h_t)
+        return h_t
+
+
+class GRUDEncoder(nn.Module):
+    """
+    GRU-D encoder with optional bidirectional processing.
+
+    TEMPORAL_BACKBONE values: gru_d / grud.
+    """
+
+    def __init__(
+        self,
+        input_dim,
+        hidden_dim=128,
+        num_layers=1,
+        dropout=0.3,
+        bidirectional=True,
+        img_dim=None,
+    ):
+        super().__init__()
+
+        if num_layers != 1:
+            raise ValueError("GRUDEncoder currently supports num_layers=1.")
+
+        self.hidden_dim = hidden_dim
+        self.bidirectional = bidirectional
+
+        self.fw_cell = GRUDCell(input_dim, hidden_dim, dropout)
+        if bidirectional:
+            self.bw_cell = GRUDCell(input_dim, hidden_dim, dropout)
+
+        self.output_dim = hidden_dim * (2 if bidirectional else 1)
+
+    def _direction_delta(self, delta, t, reverse, max_len):
+        if not reverse:
+            return delta[:, t]
+        if t + 1 < max_len:
+            return delta[:, t + 1]
+        return torch.zeros_like(delta[:, t])
+
+    def _run_one_direction(self, x, lengths, delta, reverse=False):
+        B, T, _ = x.shape
+        device = x.device
+
+        cell = self.bw_cell if reverse else self.fw_cell
+        h = torch.zeros(B, self.hidden_dim, device=device)
+        last_valid_h = h
+        time_range = range(T - 1, -1, -1) if reverse else range(T)
+
+        for t in time_range:
+            active = lengths > t
+            if not active.any():
+                continue
+
+            x_t = x[:, t, :]
+            delta_t = self._direction_delta(delta, t, reverse, T)
+            h_new = cell(x_t=x_t, h_prev=h, delta_t=delta_t)
+            h = torch.where(active.unsqueeze(1), h_new, h)
+
+            if not reverse:
+                is_last = lengths == (t + 1)
+                last_valid_h = torch.where(is_last.unsqueeze(1), h, last_valid_h)
+
+        if reverse:
+            return h
+
+        return last_valid_h
+
+    def forward(self, x, lengths, delta=None, img_seq=None, phase_seq=None):
+        if delta is None:
+            raise ValueError("GRUDEncoder requires delta.")
+
+        h_fw = self._run_one_direction(
+            x=x,
+            lengths=lengths,
+            delta=delta,
+            reverse=False,
+        )
+
+        if self.bidirectional:
+            h_bw = self._run_one_direction(
+                x=x,
+                lengths=lengths,
+                delta=delta,
+                reverse=True,
+            )
+            return torch.cat([h_fw, h_bw], dim=1)
+
+        return h_fw
+
+
 class CAGRUCell(nn.Module):
     def __init__(self, input_dim, hidden_dim, img_dim, dropout=0.3):
         super().__init__()
@@ -867,6 +989,16 @@ def build_temporal_encoder(
             num_layers=num_layers,
             dropout=dropout,
             bidirectional=bidirectional,
+        )
+
+    if name in ["gru_d", "gru-d", "grud"]:
+        return GRUDEncoder(
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            num_layers=num_layers,
+            dropout=dropout,
+            bidirectional=bidirectional,
+            img_dim=img_dim,
         )
 
     if name in ["ca_grud", "ca-grud", "cagrud"]:
