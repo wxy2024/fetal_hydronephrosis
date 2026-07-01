@@ -1215,6 +1215,35 @@ class SimpleFusionEncoder(nn.Module):
         return self.proj(fused)
 
 
+class MeanPoolingEncoder(nn.Module):
+    """对同一病例的所有有效检查级特征沿时间维度求平均。"""
+
+    def __init__(self, input_dim):
+        super().__init__()
+        self.output_dim = input_dim
+
+    def forward(self, x, lengths, delta=None, img_seq=None, phase_seq=None):
+        if torch.any(lengths <= 0):
+            raise ValueError(
+                "MeanPoolingEncoder expects every sequence to have at least one visit."
+            )
+
+        # x: [B, T, D]；只平均真实检查，忽略 batch 中用于补齐的时间步。
+        lengths = lengths.to(x.device)
+        time_index = torch.arange(x.size(1), device=x.device).unsqueeze(0)
+        valid_mask = time_index < lengths.unsqueeze(1)
+        valid_mask = valid_mask.unsqueeze(-1).to(dtype=x.dtype)
+
+        summed = (x * valid_mask).sum(dim=1)
+        mean_feat = summed / lengths.unsqueeze(1).to(dtype=x.dtype)
+        return torch.nan_to_num(
+            mean_feat,
+            nan=0.0,
+            posinf=1.0e4,
+            neginf=-1.0e4,
+        )
+
+
 def build_temporal_encoder(
     temporal_backbone,
     input_dim,
@@ -1225,6 +1254,9 @@ def build_temporal_encoder(
     img_dim=None,
 ):
     name = temporal_backbone.lower()
+
+    if name in ["mean_pooling", "mean-pooling", "mean"]:
+        return MeanPoolingEncoder(input_dim=input_dim)
 
     if name in ["simple_fusion", "simple-fusion", "simple"]:
         return SimpleFusionEncoder(

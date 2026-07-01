@@ -16,7 +16,7 @@ VISIT_FUSION_TYPE = "direct_concat"
 FUSION_HIDDEN_DIM = None
 
 TEMPORAL_BACKBONE = "gru"
-# simple_fusion / gru / gru_d / risk_gru / td_conv_gru / bit_gru / tripg_gru / ca_grud / psalm_grud / contiformer
+# mean_pooling / simple_fusion / gru / gru_d / risk_gru / td_conv_gru / bit_gru / tripg_gru / ca_grud / psalm_grud / contiformer
 
 
 # =========================
