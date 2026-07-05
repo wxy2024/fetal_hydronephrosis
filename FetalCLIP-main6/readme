@@ -76,4 +76,23 @@ https://github.com/wxy2024/fetal_hydronephrosis.git
 
 
 
+##运行选定的消融分支
+在配置文件中更改下面的配置
+$env:INPUT_MODALITY="image_only"
+然后执行
+python scripts\v1_train_5fold_online_attn_gru.py
 
+
+
+##一次运行两种消融实验
+cd D:\github_codes\fetal_hydronephrosis\FetalCLIP-main6
+conda activate wxy_fetalclip
+python run_modality_ablations.py
+它会依次运行：
+multimodal
+image_only
+text_only
+结果目录分别带有：
+_modality_multimodal
+_modality_image_only
+_modality_text_only
