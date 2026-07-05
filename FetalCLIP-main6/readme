@@ -68,9 +68,12 @@ conda activate wxy_fetalclip_contiformer
 
 cd G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main6
 
-
-
+##参数实验
+python run_epoch_experiments.py
 
 
 https://github.com/wxy2024/fetal_hydronephrosis.git
+
+
+
 
