@@ -60,16 +60,29 @@ class ModularGRUSideClassifier(nn.Module):
         dropout: float = 0.3,
         bidirectional: bool = True,
         temporal_backbone: str = "gru",
+        input_modality: str = "multimodal",
     ):
         super().__init__()
 
         self.feature_dim = feature_dim
+        self.input_modality = input_modality.lower()
+        valid_modalities = {"multimodal", "image_only", "text_only"}
+        if self.input_modality not in valid_modalities:
+            raise ValueError(
+                f"Unknown input_modality={input_modality!r}. "
+                f"Expected one of {sorted(valid_modalities)}."
+            )
 
-        self.image_pool = build_image_pooling(
-            pooling_type=image_pooling_type,
-            feature_dim=feature_dim,
-            hidden_dim=attn_hidden_dim,
-        )
+        self.uses_image = self.input_modality in {"multimodal", "image_only"}
+        self.uses_text = self.input_modality in {"multimodal", "text_only"}
+
+        self.image_pool = None
+        if self.uses_image:
+            self.image_pool = build_image_pooling(
+                pooling_type=image_pooling_type,
+                feature_dim=feature_dim,
+                hidden_dim=attn_hidden_dim,
+            )
 
         # struct_feat = image_mask + extra_feat
         # image_mask: 1
@@ -78,17 +91,24 @@ class ModularGRUSideClassifier(nn.Module):
         # age_type: 1
         # days_since_first: 1
         # interval_days: 1
-        self.struct_dim = 6
+        # text_only deliberately excludes image_mask, so image availability
+        # cannot leak into the image-ablated model.
+        self.struct_dim = 6 if self.uses_image else 5
 
-        self.visit_fusion = build_visit_fusion(
-            fusion_type=visit_fusion_type,
-            feature_dim=feature_dim,
-            struct_dim=self.struct_dim,
-            hidden_dim=fusion_hidden_dim,
-            dropout=dropout,
-        )
-
-        self.visit_dim = self.visit_fusion.output_dim
+        self.visit_fusion = None
+        if self.input_modality == "multimodal":
+            self.visit_fusion = build_visit_fusion(
+                fusion_type=visit_fusion_type,
+                feature_dim=feature_dim,
+                struct_dim=self.struct_dim,
+                hidden_dim=fusion_hidden_dim,
+                dropout=dropout,
+            )
+            self.visit_dim = self.visit_fusion.output_dim
+        else:
+            # A clean branch deletion: one FetalCLIP feature plus structural
+            # features, without a zero-filled placeholder for the removed branch.
+            self.visit_dim = feature_dim + self.struct_dim
 
 
 
@@ -153,23 +173,38 @@ class ModularGRUSideClassifier(nn.Module):
         attention_records = []
 
         for visit, exam_date in zip(visits, dates):
-            image_features = self._tensor_to_device(
-                visit.get("image_features", None)
-            )
+            image_features = None
+            if self.uses_image:
+                image_features = self._tensor_to_device(
+                    visit.get("image_features", None)
+                )
 
-            text_feat = self._tensor_to_device(
-                visit.get("text_feature", None)
-            )
+            text_feat = None
+            if self.uses_text:
+                text_feat = self._tensor_to_device(
+                    visit.get("text_feature", None)
+                )
 
-            if text_feat is None:
+            if self.uses_text and text_feat is None:
                 text_feat = torch.zeros(
                     self.feature_dim,
                     dtype=torch.float32,
                     device=device,
                 )
 
-            #img_feat, image_mask, image_attn = self.image_pool(image_features)
-            img_feat, image_mask, image_attn = self.image_pool(image_features,text_feat)
+            if self.uses_image:
+                img_feat, image_mask, image_attn = self.image_pool(
+                    image_features,
+                    text_feat if self.input_modality == "multimodal" else None,
+                )
+            else:
+                img_feat = torch.zeros(
+                    self.feature_dim,
+                    dtype=torch.float32,
+                    device=device,
+                )
+                image_mask = None
+                image_attn = torch.empty(0, dtype=torch.float32, device=device)
 
             phase_flag = float(visit.get("phase_flag", 0.0))
 
@@ -205,19 +240,23 @@ class ModularGRUSideClassifier(nn.Module):
                 device=device,
             )
 
-            struct_feat = torch.cat(
-                [
-                    image_mask,
-                    extra_feat,
-                ],
-                dim=0,
-            )  # [6]
+            if self.uses_image:
+                struct_feat = torch.cat([image_mask, extra_feat], dim=0)  # [6]
+            else:
+                struct_feat = extra_feat  # [5], no image availability signal
 
-            visit_feat, fusion_info = self.visit_fusion(
-                img_feat=img_feat,
-                text_feat=text_feat,
-                struct_feat=struct_feat,
-            )
+            if self.input_modality == "multimodal":
+                visit_feat, fusion_info = self.visit_fusion(
+                    img_feat=img_feat,
+                    text_feat=text_feat,
+                    struct_feat=struct_feat,
+                )
+            elif self.input_modality == "image_only":
+                visit_feat = torch.cat([img_feat, struct_feat], dim=0)
+                fusion_info = {"fusion_type": "image_only_concat"}
+            else:
+                visit_feat = torch.cat([text_feat, struct_feat], dim=0)
+                fusion_info = {"fusion_type": "text_only_concat"}
 
             visit_features.append(visit_feat)
             img_features_for_temporal.append(img_feat)
@@ -231,6 +270,7 @@ class ModularGRUSideClassifier(nn.Module):
                 ]
 
                 record = {
+                    "input_modality": self.input_modality,
                     "visit_id": str(visit.get("visit_id", "")),
                     "phase": str(visit.get("phase", "")),
                     "num_images": int(visit.get("num_images", 0)),

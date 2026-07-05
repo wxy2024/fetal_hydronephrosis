@@ -19,6 +19,19 @@ FUSION_HIDDEN_DIM = None
 TEMPORAL_BACKBONE = "td_conv_gru"
 # mean_pooling / simple_fusion / gru / gru_d / risk_gru / td_conv_gru / bit_gru / tripg_gru / ca_grud / psalm_grud / contiformer
 
+# Input modality ablation:
+#   multimodal: image + text + structural/time features
+#   image_only: image + structural/time features (text is not encoded)
+#   text_only:  text + structural/time features (images are not encoded and
+#               image availability is not exposed to the classifier)
+INPUT_MODALITY = os.environ.get("INPUT_MODALITY", "multimodal").strip().lower()
+VALID_INPUT_MODALITIES = {"multimodal", "image_only", "text_only"}
+if INPUT_MODALITY not in VALID_INPUT_MODALITIES:
+    raise ValueError(
+        f"Unknown INPUT_MODALITY={INPUT_MODALITY!r}. "
+        f"Expected one of {sorted(VALID_INPUT_MODALITIES)}."
+    )
+
 
 # =========================
 # 1. 数据路径配置
@@ -38,6 +51,7 @@ RESULT_DIR = OUTPUT_ROOT / (
     f"_fig_{IMAGE_POOLING_TYPE}"
     f"_visit_{VISIT_FUSION_TYPE}"
     f"_{TEMPORAL_BACKBONE}"
+    f"_modality_{INPUT_MODALITY}"
 )
 
 LOG_DIR = OUTPUT_ROOT / "logs"

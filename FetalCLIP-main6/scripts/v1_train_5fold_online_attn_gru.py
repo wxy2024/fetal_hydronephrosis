@@ -41,6 +41,7 @@ from configs.config_online_attn import (
     VISIT_FUSION_TYPE,
     FUSION_HIDDEN_DIM,
     TEMPORAL_BACKBONE,
+    INPUT_MODALITY,
 )
 
 from data.dataset_online import collect_case_side_samples_online
@@ -76,7 +77,7 @@ def collate_raw_samples(batch):
     return batch
 
 
-def attach_fetalclip_features_in_memory(samples, extractor):
+def attach_fetalclip_features_in_memory(samples, extractor, input_modality):
     print("\n" + "=" * 80)
     print("Extracting frozen FetalCLIP features into memory")
     print("=" * 80)
@@ -93,27 +94,35 @@ def attach_fetalclip_features_in_memory(samples, extractor):
                 f"{visit['visit_id']} | "
                 f"images={visit['num_images']}"
             )
-            visit["text_feature"] = extractor.encode_text(visit.get("report_text", ""))
-            visit["image_features"] = extractor.encode_images(visit.get("image_paths", []))
+            if input_modality in {"multimodal", "text_only"}:
+                visit["text_feature"] = extractor.encode_text(
+                    visit.get("report_text", "")
+                )
+            if input_modality in {"multimodal", "image_only"}:
+                visit["image_features"] = extractor.encode_images(
+                    visit.get("image_paths", [])
+                )
 
     print("Feature extraction completed.")
 
 
-def infer_feature_dim(samples) -> int:
+def infer_feature_dim(samples, input_modality) -> int:
     for sample in samples:
         for visit in sample["visits"]:
-            text_feat = visit.get("text_feature", None)
-            if text_feat is not None:
-                return int(text_feat.shape[0])
+            if input_modality in {"multimodal", "text_only"}:
+                text_feat = visit.get("text_feature", None)
+                if text_feat is not None:
+                    return int(text_feat.shape[0])
 
-            image_feats = visit.get("image_features", None)
-            if image_feats is not None and image_feats.numel() > 0:
-                return int(image_feats.shape[1])
+            if input_modality in {"multimodal", "image_only"}:
+                image_feats = visit.get("image_features", None)
+                if image_feats is not None and image_feats.numel() > 0:
+                    return int(image_feats.shape[1])
 
     raise RuntimeError("Could not infer FetalCLIP feature dimension.")
 
 
-def make_train_loader(train_items):
+def make_train_loader(train_items, seed):
     train_dataset = RawSideDataset(train_items)
     train_labels = [int(x["label"]) for x in train_items]
     class_counts = np.bincount(train_labels, minlength=2)
@@ -127,6 +136,7 @@ def make_train_loader(train_items):
         weights=torch.DoubleTensor(weights),
         num_samples=len(weights),
         replacement=True,
+        generator=torch.Generator().manual_seed(seed),
     )
 
     return DataLoader(
@@ -139,6 +149,9 @@ def make_train_loader(train_items):
 
 
 def train_one_fold(train_items, test_items, feature_dim: int, fold_id: str, test_case_ids):
+    fold_number = int(fold_id.rsplit("_", 1)[-1])
+    fold_seed = SEED + fold_number
+    set_seed(fold_seed)
     device = torch.device(DEVICE if torch.cuda.is_available() else "cpu")
 
     print("[Device Check] DEVICE from config:", DEVICE)
@@ -147,7 +160,7 @@ def train_one_fold(train_items, test_items, feature_dim: int, fold_id: str, test
     if torch.cuda.is_available():
         print("[Device Check] GPU name:", torch.cuda.get_device_name(0))
 
-    train_loader = make_train_loader(train_items)
+    train_loader = make_train_loader(train_items, seed=fold_seed)
 
     model = ModularGRUSideClassifier(
         feature_dim=feature_dim,
@@ -160,6 +173,7 @@ def train_one_fold(train_items, test_items, feature_dim: int, fold_id: str, test
         dropout=DROPOUT,
         bidirectional=GRU_BIDIRECTIONAL,
         temporal_backbone=TEMPORAL_BACKBONE,
+        input_modality=INPUT_MODALITY,
     ).to(device)
     print("[Device Check] model device:", next(model.parameters()).device)
 
@@ -229,6 +243,7 @@ def train_one_fold(train_items, test_items, feature_dim: int, fold_id: str, test
             fold_results.append(
                 {
                     "fold_id": fold_id,
+                    "input_modality": INPUT_MODALITY,
                     "test_case_ids": "|".join(test_case_ids),
                     "sample_id": item["sample_id"],
                     "case_id": item["case_id"],
@@ -340,6 +355,8 @@ def main():
     print("=" * 80)
     print("Reading raw data")
     print(f"RAW_ROOT: {RAW_ROOT}")
+    print(f"INPUT_MODALITY: {INPUT_MODALITY}")
+    print(f"RESULT_DIR: {RESULT_DIR}")
     print("=" * 80)
 
     samples = collect_case_side_samples_online(RAW_ROOT)
@@ -362,14 +379,14 @@ def main():
     )
 
     if USE_MEMORY_CACHE:
-        attach_fetalclip_features_in_memory(samples, extractor)
+        attach_fetalclip_features_in_memory(samples, extractor, INPUT_MODALITY)
     else:
         raise NotImplementedError(
             "This script expects USE_MEMORY_CACHE=True. "
             "Feature extraction is done once before cross-validation."
         )
 
-    feature_dim = infer_feature_dim(samples)
+    feature_dim = infer_feature_dim(samples, INPUT_MODALITY)
     print(f"FetalCLIP feature_dim: {feature_dim}")
 
     case_ids = sorted(set(x["case_id"] for x in samples))
