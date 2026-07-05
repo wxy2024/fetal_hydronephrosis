@@ -75,5 +75,8 @@ python run_epoch_experiments.py
 https://github.com/wxy2024/fetal_hydronephrosis.git
 
 
-
+#消融实验运行方式
+cd D:\github_codes\fetal_hydronephrosis\FetalCLIP-main6
+conda activate wxy_fetalclip
+python run_modality_ablations.py
 
