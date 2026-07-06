@@ -61,7 +61,12 @@ def apply_temporal_experiment(
     experiment: str,
     shuffle_seed: int = 42,
 ) -> List[Dict]:
-    """Return shallow sample copies with the requested visit sequence."""
+    """Return shallow sample copies with the requested visit sequence.
+
+    ``shuffled`` only permutes visits here.  The configuration pairs this mode
+    with ``USE_EXPLICIT_TIME=False``, so phase, age, days-since-first, and
+    inter-visit intervals are all hidden by the classifier after permutation.
+    """
     experiment = experiment.strip().lower()
     if experiment not in VALID_TEMPORAL_EXPERIMENTS:
         raise ValueError(
@@ -89,6 +94,10 @@ def apply_temporal_experiment(
         item["visits"] = visits
         item["num_visits"] = len(visits)
         item["temporal_experiment"] = experiment
+        item["explicit_time_removed"] = experiment in {
+            "no_explicit_time",
+            "shuffled",
+        }
         item["temporal_shuffle_seed"] = (
             shuffle_seed if experiment == "shuffled" else None
         )

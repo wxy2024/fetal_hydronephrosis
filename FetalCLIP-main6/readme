@@ -112,7 +112,7 @@ baseline
 first_only
 last_only
 no_explicit_time
-shuffled（seed=42、43、44、45、46）
+shuffled（seed=42、43、44、45、46）：先移除全部显式时间/阶段信息，再打乱检查顺序
 
 也可以单独运行，例如：
 $env:TEMPORAL_EXPERIMENT="first_only"
@@ -134,3 +134,8 @@ $env:EARLY_STOPPING_MIN_DELTA="0.0001"
 $env:TEMPORAL_EXPERIMENT="shuffled"
 $env:TEMPORAL_SHUFFLE_SEED="42"
 python scripts\v1_train_5fold_online_attn_gru.py
+
+shuffled 与 no_explicit_time 使用相同的时间屏蔽：phase、孕龄/出生后日龄、
+days_since_first、interval_days，以及传入时间编码器的 delta/phase 全部置零。
+两者唯一差别是 shuffled 额外使用按 case 固定的非恒等排列打乱 visit 顺序，
+因此不会因为负时间间隔或残留阶段信息造成额外分布偏移。

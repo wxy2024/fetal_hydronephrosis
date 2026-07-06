@@ -34,6 +34,9 @@ if INPUT_MODALITY not in VALID_INPUT_MODALITIES:
 
 # Temporal-information ablation. All modes use the same original cohort, which
 # is first restricted to cases with at least TEMPORAL_MIN_VISITS examinations.
+# ``shuffled`` is intentionally defined as ``no_explicit_time + shuffled
+# visits`` so that negative intervals or stage/age clues cannot confound the
+# effect of destroying chronological order.
 TEMPORAL_EXPERIMENT = os.environ.get(
     "TEMPORAL_EXPERIMENT", "no_explicit_time"
 ).strip().lower()
@@ -57,7 +60,8 @@ if TEMPORAL_MIN_VISITS < 2:
 # This seed changes only the visit permutation. It does not change model
 # initialization, folds, sampling, or the training seed.
 TEMPORAL_SHUFFLE_SEED = int(os.environ.get("TEMPORAL_SHUFFLE_SEED", "42"))
-USE_EXPLICIT_TIME = TEMPORAL_EXPERIMENT != "no_explicit_time"
+NO_EXPLICIT_TIME_EXPERIMENTS = {"no_explicit_time", "shuffled"}
+USE_EXPLICIT_TIME = TEMPORAL_EXPERIMENT not in NO_EXPLICIT_TIME_EXPERIMENTS
 
 
 # =========================
