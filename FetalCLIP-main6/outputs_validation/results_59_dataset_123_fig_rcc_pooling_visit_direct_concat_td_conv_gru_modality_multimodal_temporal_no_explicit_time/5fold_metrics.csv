@@ -1,0 +1,2 @@
+﻿temporal_experiment,temporal_shuffle_seed,num_folds,Accuracy_mean,Accuracy_std,Sensitivity_mean,Sensitivity_std,Specificity_mean,Specificity_std,Precision_PPV_mean,Precision_PPV_std,NPV_mean,NPV_std,F1_mean,F1_std,AUC_mean,AUC_std,TN_sum,FP_sum,FN_sum,TP_sum
+no_explicit_time,,5,0.9178571428571429,0.07969969144436213,0.780595238095238,0.2510845240324795,0.992,0.017888543819998333,0.9866666666666667,0.029814239699997188,0.901233124750366,0.09243096716763449,0.8490179471667674,0.18566804999035164,0.9910055468341182,0.010127427101055018,130,1,16,57

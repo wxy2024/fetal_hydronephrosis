@@ -24,7 +24,7 @@ TEMPORAL_BACKBONE = "td_conv_gru"
 #   image_only: image + structural/time features (text is not encoded)
 #   text_only:  text + structural/time features (images are not encoded and
 #               image availability is not exposed to the classifier)
-INPUT_MODALITY = os.environ.get("INPUT_MODALITY", "text_only").strip().lower()
+INPUT_MODALITY = os.environ.get("INPUT_MODALITY", "multimodal").strip().lower()
 VALID_INPUT_MODALITIES = {"multimodal", "image_only", "text_only"}
 if INPUT_MODALITY not in VALID_INPUT_MODALITIES:
     raise ValueError(
@@ -35,7 +35,7 @@ if INPUT_MODALITY not in VALID_INPUT_MODALITIES:
 # Temporal-information ablation. All modes use the same original cohort, which
 # is first restricted to cases with at least TEMPORAL_MIN_VISITS examinations.
 TEMPORAL_EXPERIMENT = os.environ.get(
-    "TEMPORAL_EXPERIMENT", "baseline"
+    "TEMPORAL_EXPERIMENT", "no_explicit_time"
 ).strip().lower()
 VALID_TEMPORAL_EXPERIMENTS = {
     "baseline",
@@ -69,7 +69,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs_validation"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 54
+EXP_ID = 62
 #EXP_ID = int(os.environ.get("EXP_ID", 34))
 
 
