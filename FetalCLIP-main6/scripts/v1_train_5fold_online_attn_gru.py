@@ -42,9 +42,17 @@ from configs.config_online_attn import (
     FUSION_HIDDEN_DIM,
     TEMPORAL_BACKBONE,
     INPUT_MODALITY,
+    TEMPORAL_EXPERIMENT,
+    TEMPORAL_MIN_VISITS,
+    TEMPORAL_SHUFFLE_SEED,
+    USE_EXPLICIT_TIME,
 )
 
 from data.dataset_online import collect_case_side_samples_online
+from data.temporal_ablations import (
+    apply_temporal_experiment,
+    filter_multivisit_cases,
+)
 from fetalclip.fetalclip_wrapper import FetalCLIPFeatureExtractor
 from models.longitudinal_gru_classifier import ModularGRUSideClassifier
 from utils.metrics import compute_binary_metrics
@@ -174,6 +182,7 @@ def train_one_fold(train_items, test_items, feature_dim: int, fold_id: str, test
         bidirectional=GRU_BIDIRECTIONAL,
         temporal_backbone=TEMPORAL_BACKBONE,
         input_modality=INPUT_MODALITY,
+        use_explicit_time=USE_EXPLICIT_TIME,
     ).to(device)
     print("[Device Check] model device:", next(model.parameters()).device)
 
@@ -244,13 +253,22 @@ def train_one_fold(train_items, test_items, feature_dim: int, fold_id: str, test
                 {
                     "fold_id": fold_id,
                     "input_modality": INPUT_MODALITY,
+                    "temporal_experiment": TEMPORAL_EXPERIMENT,
+                    "temporal_shuffle_seed": (
+                        TEMPORAL_SHUFFLE_SEED
+                        if TEMPORAL_EXPERIMENT == "shuffled"
+                        else ""
+                    ),
                     "test_case_ids": "|".join(test_case_ids),
                     "sample_id": item["sample_id"],
                     "case_id": item["case_id"],
                     "side": item["side"],
                     "label": int(item["label"]),
                     "num_visits": int(item["num_visits"]),
-                    "visit_ids_sorted": "|".join(
+                    "visit_ids_chronological": "|".join(
+                        item.get("chronological_visit_ids", [])
+                    ),
+                    "visit_ids_used": "|".join(
                         [str(v.get("visit_id", "")) for v in item["visits"]]
                     ),
                     "prob": prob,
@@ -334,7 +352,15 @@ def summarize_fold_metrics(fold_metric_rows):
         "AUC",
     ]
 
-    summary = {"num_folds": len(fold_metric_rows)}
+    summary = {
+        "temporal_experiment": TEMPORAL_EXPERIMENT,
+        "temporal_shuffle_seed": (
+            TEMPORAL_SHUFFLE_SEED
+            if TEMPORAL_EXPERIMENT == "shuffled"
+            else ""
+        ),
+        "num_folds": len(fold_metric_rows),
+    }
     fold_metric_df = pd.DataFrame(fold_metric_rows)
 
     for metric_name in metric_names:
@@ -356,11 +382,28 @@ def main():
     print("Reading raw data")
     print(f"RAW_ROOT: {RAW_ROOT}")
     print(f"INPUT_MODALITY: {INPUT_MODALITY}")
+    print(f"TEMPORAL_EXPERIMENT: {TEMPORAL_EXPERIMENT}")
+    if TEMPORAL_EXPERIMENT == "shuffled":
+        print(f"TEMPORAL_SHUFFLE_SEED: {TEMPORAL_SHUFFLE_SEED}")
+    print(f"USE_EXPLICIT_TIME: {USE_EXPLICIT_TIME}")
     print(f"RESULT_DIR: {RESULT_DIR}")
     print("=" * 80)
 
     samples = collect_case_side_samples_online(RAW_ROOT)
-    print(f"Side-level sample count: {len(samples)}")
+    print(f"Side-level sample count before temporal cohort filter: {len(samples)}")
+
+    samples, cohort_stats = filter_multivisit_cases(
+        samples,
+        min_visits=TEMPORAL_MIN_VISITS,
+    )
+    print(f"Temporal cohort filter: {cohort_stats}")
+
+    samples = apply_temporal_experiment(
+        samples,
+        experiment=TEMPORAL_EXPERIMENT,
+        shuffle_seed=TEMPORAL_SHUFFLE_SEED,
+    )
+    print(f"Side-level sample count after temporal cohort filter: {len(samples)}")
 
     if len(samples) == 0:
         raise RuntimeError("No samples were loaded. Please check RAW_ROOT and dataset structure.")
@@ -445,6 +488,12 @@ def main():
         fold_metrics = compute_binary_metrics(fold_y_true, fold_y_prob, threshold=0.5)
         fold_metrics_row = {
             "fold_id": fold_id,
+            "temporal_experiment": TEMPORAL_EXPERIMENT,
+            "temporal_shuffle_seed": (
+                TEMPORAL_SHUFFLE_SEED
+                if TEMPORAL_EXPERIMENT == "shuffled"
+                else ""
+            ),
             "test_case_ids": "|".join(test_case_ids),
             "train_samples": len(train_items),
             "test_samples": len(test_items),
@@ -465,7 +514,15 @@ def main():
 
     y_true = [r["label"] for r in all_fold_results]
     y_prob = [r["prob"] for r in all_fold_results]
-    pooled_metrics = compute_binary_metrics(y_true, y_prob, threshold=0.5)
+    pooled_metrics = {
+        "temporal_experiment": TEMPORAL_EXPERIMENT,
+        "temporal_shuffle_seed": (
+            TEMPORAL_SHUFFLE_SEED
+            if TEMPORAL_EXPERIMENT == "shuffled"
+            else ""
+        ),
+        **compute_binary_metrics(y_true, y_prob, threshold=0.5),
+    }
     cv_metrics = summarize_fold_metrics(fold_metric_rows)
 
     print("\n" + "=" * 80)

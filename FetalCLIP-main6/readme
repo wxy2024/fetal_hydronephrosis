@@ -97,3 +97,27 @@ text_only
 _modality_multimodal
 _modality_image_only
 _modality_text_only
+
+
+##时序信息消融实验
+所有实验先排除原始 visit 数小于 2 的病例，再进行 First-only/Last-only 等变换。
+文本内容不会去时间化。模型超参数继续使用 configs/config_online_attn.py 中的设置。
+
+cd G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main6
+conda activate wxy_fetalclip
+python run_temporal_ablations.py
+
+它会依次运行：
+baseline
+first_only
+last_only
+no_explicit_time
+shuffled（seed=42、43、44、45、46）
+
+也可以单独运行，例如：
+$env:TEMPORAL_EXPERIMENT="first_only"
+python scripts\v1_train_5fold_online_attn_gru.py
+
+$env:TEMPORAL_EXPERIMENT="shuffled"
+$env:TEMPORAL_SHUFFLE_SEED="42"
+python scripts\v1_train_5fold_online_attn_gru.py

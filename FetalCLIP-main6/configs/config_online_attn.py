@@ -32,6 +32,33 @@ if INPUT_MODALITY not in VALID_INPUT_MODALITIES:
         f"Expected one of {sorted(VALID_INPUT_MODALITIES)}."
     )
 
+# Temporal-information ablation. All modes use the same original cohort, which
+# is first restricted to cases with at least TEMPORAL_MIN_VISITS examinations.
+TEMPORAL_EXPERIMENT = os.environ.get(
+    "TEMPORAL_EXPERIMENT", "baseline"
+).strip().lower()
+VALID_TEMPORAL_EXPERIMENTS = {
+    "baseline",
+    "first_only",
+    "last_only",
+    "shuffled",
+    "no_explicit_time",
+}
+if TEMPORAL_EXPERIMENT not in VALID_TEMPORAL_EXPERIMENTS:
+    raise ValueError(
+        f"Unknown TEMPORAL_EXPERIMENT={TEMPORAL_EXPERIMENT!r}. "
+        f"Expected one of {sorted(VALID_TEMPORAL_EXPERIMENTS)}."
+    )
+
+TEMPORAL_MIN_VISITS = int(os.environ.get("TEMPORAL_MIN_VISITS", "2"))
+if TEMPORAL_MIN_VISITS < 2:
+    raise ValueError("TEMPORAL_MIN_VISITS must be at least 2 for this experiment.")
+
+# This seed changes only the visit permutation. It does not change model
+# initialization, folds, sampling, or the training seed.
+TEMPORAL_SHUFFLE_SEED = int(os.environ.get("TEMPORAL_SHUFFLE_SEED", "42"))
+USE_EXPLICIT_TIME = TEMPORAL_EXPERIMENT != "no_explicit_time"
+
 
 # =========================
 # 1. 数据路径配置
@@ -52,6 +79,12 @@ RESULT_DIR = OUTPUT_ROOT / (
     f"_visit_{VISIT_FUSION_TYPE}"
     f"_{TEMPORAL_BACKBONE}"
     f"_modality_{INPUT_MODALITY}"
+    f"_temporal_{TEMPORAL_EXPERIMENT}"
+    + (
+        f"_shuffle_seed_{TEMPORAL_SHUFFLE_SEED}"
+        if TEMPORAL_EXPERIMENT == "shuffled"
+        else ""
+    )
 )
 
 LOG_DIR = OUTPUT_ROOT / "logs"

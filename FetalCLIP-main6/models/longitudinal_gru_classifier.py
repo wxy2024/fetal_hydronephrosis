@@ -61,11 +61,13 @@ class ModularGRUSideClassifier(nn.Module):
         bidirectional: bool = True,
         temporal_backbone: str = "gru",
         input_modality: str = "multimodal",
+        use_explicit_time: bool = True,
     ):
         super().__init__()
 
         self.feature_dim = feature_dim
         self.input_modality = input_modality.lower()
+        self.use_explicit_time = bool(use_explicit_time)
         valid_modalities = {"multimodal", "image_only", "text_only"}
         if self.input_modality not in valid_modalities:
             raise ValueError(
@@ -228,17 +230,27 @@ class ModularGRUSideClassifier(nn.Module):
             if exam_date is not None:
                 prev_date = exam_date
 
-            extra_feat = torch.tensor(
-                [
-                    phase_flag,
-                    age_days / 300.0,
-                    age_type,
-                    days_since_first / 1000.0,
-                    interval_days / 100.0,
-                ],
-                dtype=torch.float32,
-                device=device,
-            )
+            if self.use_explicit_time:
+                extra_feat = torch.tensor(
+                    [
+                        phase_flag,
+                        age_days / 300.0,
+                        age_type,
+                        days_since_first / 1000.0,
+                        interval_days / 100.0,
+                    ],
+                    dtype=torch.float32,
+                    device=device,
+                )
+                temporal_interval = interval_days / 100.0
+                temporal_phase = phase_flag
+            else:
+                # Keep the feature dimensionality and architecture unchanged,
+                # but hide every explicit time/stage signal from both visit
+                # fusion and time-aware temporal encoders.
+                extra_feat = torch.zeros(5, dtype=torch.float32, device=device)
+                temporal_interval = 0.0
+                temporal_phase = 0.0
 
             if self.uses_image:
                 struct_feat = torch.cat([image_mask, extra_feat], dim=0)  # [6]
@@ -260,8 +272,8 @@ class ModularGRUSideClassifier(nn.Module):
 
             visit_features.append(visit_feat)
             img_features_for_temporal.append(img_feat)
-            interval_features.append(interval_days / 100.0)
-            phase_features.append(phase_flag)
+            interval_features.append(temporal_interval)
+            phase_features.append(temporal_phase)
 
             if return_attention:
                 image_names = [
