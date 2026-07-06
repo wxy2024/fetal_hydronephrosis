@@ -66,10 +66,10 @@ USE_EXPLICIT_TIME = TEMPORAL_EXPERIMENT != "no_explicit_time"
 RAW_ROOT = Path(r"G:\wxy_codes\dataset_hydro_123\raw")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_ROOT = PROJECT_ROOT / "outputs"
+OUTPUT_ROOT = PROJECT_ROOT / "outputs_validation"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 46
+EXP_ID = 54
 #EXP_ID = int(os.environ.get("EXP_ID", 34))
 
 
@@ -115,7 +115,7 @@ SEED = 42
 # Nested CV treats this as the maximum number of epochs considered by each
 # inner fold.  The selected epoch is then used to retrain on the complete
 # outer-training fold before the outer test fold is evaluated once.
-NUM_EPOCHS = int(os.environ.get("NUM_EPOCHS", "100"))
+NUM_EPOCHS = int(os.environ.get("NUM_EPOCHS", "50"))
 INNER_N_SPLITS = int(os.environ.get("INNER_N_SPLITS", "3"))
 EARLY_STOPPING_PATIENCE = int(os.environ.get("EARLY_STOPPING_PATIENCE", "10"))
 EARLY_STOPPING_MIN_DELTA = float(
@@ -133,7 +133,7 @@ if EARLY_STOPPING_MIN_DELTA < 0:
 LR = 1e-3
 WEIGHT_DECAY = 1e-4
 DROPOUT = 0.3
-BATCH_SIZE = 2
+BATCH_SIZE = 8
 
 # 是否使用 pos_weight 处理类别不平衡。
 # 你之前发现 USE_POS_WEIGHT=False 时 GRU 结果更稳，所以这里默认 False。
