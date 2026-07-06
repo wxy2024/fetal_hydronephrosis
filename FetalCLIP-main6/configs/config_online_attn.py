@@ -8,7 +8,7 @@ from pathlib import Path
 
 # 图像聚合方式：
 # mean / attention / gated_mil / text_cross_attention / sra_gated_mil / rrs_gated_mil / rcc_pooling / vcm_pooling / pgs_pooling
-IMAGE_POOLING_TYPE = "mean"
+IMAGE_POOLING_TYPE = "rcc_pooling"
 
 # 检查级融合方式：
 # direct_concat / gated_multimodal / film_gated_multimodal / transformer_token
@@ -24,7 +24,7 @@ TEMPORAL_BACKBONE = "td_conv_gru"
 #   image_only: image + structural/time features (text is not encoded)
 #   text_only:  text + structural/time features (images are not encoded and
 #               image availability is not exposed to the classifier)
-INPUT_MODALITY = os.environ.get("INPUT_MODALITY", "multimodal").strip().lower()
+INPUT_MODALITY = os.environ.get("INPUT_MODALITY", "text_only").strip().lower()
 VALID_INPUT_MODALITIES = {"multimodal", "image_only", "text_only"}
 if INPUT_MODALITY not in VALID_INPUT_MODALITIES:
     raise ValueError(
@@ -42,7 +42,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 45
+EXP_ID = 46
 #EXP_ID = int(os.environ.get("EXP_ID", 34))
 
 
@@ -79,12 +79,12 @@ MAX_REPORT_CHARS = 512
 # =========================
 SEED = 42
 # epoch 没标注就默认是50
-NUM_EPOCHS = 10
+NUM_EPOCHS = 25
 #NUM_EPOCHS = int(os.environ.get("NUM_EPOCHS", 30))
 LR = 1e-3
 WEIGHT_DECAY = 1e-4
 DROPOUT = 0.3
-BATCH_SIZE = 4
+BATCH_SIZE = 2
 
 # 是否使用 pos_weight 处理类别不平衡。
 # 你之前发现 USE_POS_WEIGHT=False 时 GRU 结果更稳，所以这里默认 False。

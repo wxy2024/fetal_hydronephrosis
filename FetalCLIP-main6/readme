@@ -80,12 +80,13 @@ https://github.com/wxy2024/fetal_hydronephrosis.git
 在配置文件中更改下面的配置
 $env:INPUT_MODALITY="image_only"
 然后执行
+cd G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main6
 python scripts\v1_train_5fold_online_attn_gru.py
 
 
 
 ##一次运行两种消融实验
-cd D:\github_codes\fetal_hydronephrosis\FetalCLIP-main6
+cd G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main6
 conda activate wxy_fetalclip
 python run_modality_ablations.py
 它会依次运行：
