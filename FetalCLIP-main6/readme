@@ -118,6 +118,19 @@ shuffled（seed=42、43、44、45、46）
 $env:TEMPORAL_EXPERIMENT="first_only"
 python scripts\v1_train_5fold_online_attn_gru.py
 
+训练采用嵌套交叉验证选择 epoch：外层 5 折仅用于最终评估；每个外层训练集内部
+再做 3 折交叉验证，以验证集 BCE loss 和 early stopping 选择各内折最佳 epoch，
+取中位数后在完整外层训练集上重新训练，最后只评估一次外层测试集。
+
+默认最大 epoch=100、patience=10，可通过环境变量调整：
+$env:NUM_EPOCHS="100"
+$env:INNER_N_SPLITS="3"
+$env:EARLY_STOPPING_PATIENCE="10"
+$env:EARLY_STOPPING_MIN_DELTA="0.0001"
+
+每次运行会额外保存 nested_cv_epoch_selection.csv，记录所有内层划分、最佳 epoch、
+验证损失以及外层最终采用的中位数 epoch。
+
 $env:TEMPORAL_EXPERIMENT="shuffled"
 $env:TEMPORAL_SHUFFLE_SEED="42"
 python scripts\v1_train_5fold_online_attn_gru.py

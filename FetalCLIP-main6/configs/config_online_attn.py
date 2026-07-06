@@ -112,8 +112,24 @@ MAX_REPORT_CHARS = 512
 # =========================
 SEED = 42
 # epoch 没标注就默认是50
-NUM_EPOCHS = 25
-#NUM_EPOCHS = int(os.environ.get("NUM_EPOCHS", 30))
+# Nested CV treats this as the maximum number of epochs considered by each
+# inner fold.  The selected epoch is then used to retrain on the complete
+# outer-training fold before the outer test fold is evaluated once.
+NUM_EPOCHS = int(os.environ.get("NUM_EPOCHS", "100"))
+INNER_N_SPLITS = int(os.environ.get("INNER_N_SPLITS", "3"))
+EARLY_STOPPING_PATIENCE = int(os.environ.get("EARLY_STOPPING_PATIENCE", "10"))
+EARLY_STOPPING_MIN_DELTA = float(
+    os.environ.get("EARLY_STOPPING_MIN_DELTA", "1e-4")
+)
+
+if NUM_EPOCHS < 1:
+    raise ValueError("NUM_EPOCHS must be at least 1.")
+if INNER_N_SPLITS < 2:
+    raise ValueError("INNER_N_SPLITS must be at least 2.")
+if EARLY_STOPPING_PATIENCE < 1:
+    raise ValueError("EARLY_STOPPING_PATIENCE must be at least 1.")
+if EARLY_STOPPING_MIN_DELTA < 0:
+    raise ValueError("EARLY_STOPPING_MIN_DELTA must be non-negative.")
 LR = 1e-3
 WEIGHT_DECAY = 1e-4
 DROPOUT = 0.3
