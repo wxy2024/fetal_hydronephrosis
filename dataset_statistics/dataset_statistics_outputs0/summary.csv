@@ -1,0 +1,10 @@
+item,value,note
+total_cases,23,case_xxxx directories
+case_positive,17,case-level: left_label=1 or right_label=1
+case_negative,6,case-level: both left_label=0 and right_label=0
+side_positive,17,side-level: left/right counted separately
+side_negative,29,side-level: left/right counted separately
+total_visits,200,visit/exam directories
+total_images,1264,image files under left/right/images
+year_span,2022-2026,"years found: [2022, 2023, 2024, 2025, 2026]"
+center_count,1,"single-center, based on your provided description"
