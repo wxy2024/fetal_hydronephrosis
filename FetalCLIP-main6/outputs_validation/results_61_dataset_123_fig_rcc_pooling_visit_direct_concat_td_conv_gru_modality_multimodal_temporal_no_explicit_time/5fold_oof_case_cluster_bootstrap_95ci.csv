@@ -1,0 +1,8 @@
+﻿metric,estimate,ci_low_95,ci_high_95,estimate_with_95ci,method,cluster_col,n_rows,n_clusters,threshold,seed,n_bootstrap_requested,n_bootstrap_used,n_bootstrap_skipped_auc_single_class,TN,FP,FN,TP
+Accuracy,0.9362745098039216,0.9019607843137255,0.9656862745098039,0.936 (0.902-0.966),outer_oof_case_cluster_bootstrap_percentile,case_id,204,102,0.5,20260707,10000,10000,0,127,4,9,64
+Sensitivity,0.8767123287671232,0.8,0.9444444444444444,0.877 (0.800-0.944),outer_oof_case_cluster_bootstrap_percentile,case_id,204,102,0.5,20260707,10000,10000,0,127,4,9,64
+Specificity,0.9694656488549618,0.936,0.9927007299270073,0.969 (0.936-0.993),outer_oof_case_cluster_bootstrap_percentile,case_id,204,102,0.5,20260707,10000,10000,0,127,4,9,64
+Precision_PPV,0.9411764705882353,0.8857142857142857,0.9857193158953722,0.941 (0.886-0.986),outer_oof_case_cluster_bootstrap_percentile,case_id,204,102,0.5,20260707,10000,10000,0,127,4,9,64
+NPV,0.9338235294117647,0.8905109489051095,0.9710144927536232,0.934 (0.891-0.971),outer_oof_case_cluster_bootstrap_percentile,case_id,204,102,0.5,20260707,10000,10000,0,127,4,9,64
+F1,0.9078014184397163,0.8591549295774648,0.95,0.908 (0.859-0.950),outer_oof_case_cluster_bootstrap_percentile,case_id,204,102,0.5,20260707,10000,10000,0,127,4,9,64
+AUC,0.9833734183833525,0.9653697724360717,0.9965729782825504,0.983 (0.965-0.997),outer_oof_case_cluster_bootstrap_percentile,case_id,204,102,0.5,20260707,10000,10000,0,127,4,9,64
