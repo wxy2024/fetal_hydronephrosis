@@ -532,6 +532,8 @@ def summarize_fold_metrics(fold_metric_rows):
         "NPV",
         "F1",
         "AUC",
+        "BrierScore",
+        "ECE",
     ]
 
     summary = {

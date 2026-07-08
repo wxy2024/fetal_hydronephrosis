@@ -30,6 +30,8 @@ DEFAULT_METRICS = [
     "NPV",
     "F1",
     "AUC",
+    "BrierScore",
+    "ECE",
 ]
 
 
@@ -78,6 +80,9 @@ def compute_binary_metrics(
     fn = int(((y_true == 1) & (y_pred == 0)).sum())
     n = int(len(y_true))
 
+    brier_score = float(np.mean((y_prob - y_true) ** 2)) if n > 0 else np.nan
+    ece = expected_calibration_error(y_true, y_prob, n_bins=10)
+
     return {
         "Accuracy": (tp + tn) / n if n > 0 else np.nan,
         "Sensitivity": tp / (tp + fn) if (tp + fn) > 0 else np.nan,
@@ -86,12 +91,47 @@ def compute_binary_metrics(
         "NPV": tn / (tn + fn) if (tn + fn) > 0 else np.nan,
         "F1": 2 * tp / (2 * tp + fp + fn) if (2 * tp + fp + fn) > 0 else np.nan,
         "AUC": auc_rank(y_true, y_prob),
+        "BrierScore": brier_score,
+        "ECE": ece,
         "TN": tn,
         "FP": fp,
         "FN": fn,
         "TP": tp,
         "N": n,
     }
+
+
+def expected_calibration_error(
+    y_true: np.ndarray,
+    y_prob: np.ndarray,
+    n_bins: int = 10,
+) -> float:
+    y_true = np.asarray(y_true).astype(int)
+    y_prob = np.asarray(y_prob).astype(float)
+
+    if len(y_true) == 0:
+        return np.nan
+
+    bin_edges = np.linspace(0.0, 1.0, n_bins + 1)
+    ece = 0.0
+
+    for bin_idx in range(n_bins):
+        lower = bin_edges[bin_idx]
+        upper = bin_edges[bin_idx + 1]
+        if bin_idx == n_bins - 1:
+            in_bin = (y_prob >= lower) & (y_prob <= upper)
+        else:
+            in_bin = (y_prob >= lower) & (y_prob < upper)
+
+        bin_count = int(in_bin.sum())
+        if bin_count == 0:
+            continue
+
+        bin_accuracy = float(y_true[in_bin].mean())
+        bin_confidence = float(y_prob[in_bin].mean())
+        ece += (bin_count / len(y_true)) * abs(bin_accuracy - bin_confidence)
+
+    return float(ece)
 
 
 def validate_input(
