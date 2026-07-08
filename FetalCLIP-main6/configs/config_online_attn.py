@@ -38,7 +38,7 @@ if INPUT_MODALITY not in VALID_INPUT_MODALITIES:
 # visits`` so that negative intervals or stage/age clues cannot confound the
 # effect of destroying chronological order.
 TEMPORAL_EXPERIMENT = os.environ.get(
-    "TEMPORAL_EXPERIMENT", "no_explicit_time"
+    "TEMPORAL_EXPERIMENT", "shuffled"
 ).strip().lower()
 VALID_TEMPORAL_EXPERIMENTS = {
     "baseline",
@@ -114,7 +114,7 @@ MAX_REPORT_CHARS = 512
 # =========================
 # 4. 训练配置
 # =========================
-SEED = 42
+SEED = 50
 # epoch 没标注就默认是50
 # Nested CV treats this as the maximum number of epochs considered by each
 # inner fold.  The selected epoch is then used to retrain on the complete
