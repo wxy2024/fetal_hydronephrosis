@@ -1,0 +1,183 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1080" viewBox="0 0 1800 1080">
+  <defs>
+    <style>
+      .title { font-family: Arial, Helvetica, sans-serif; font-size: 34px; font-weight: 700; fill: #1f2937; }
+      .subtitle { font-family: Arial, Helvetica, sans-serif; font-size: 20px; fill: #4b5563; }
+      .label { font-family: Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700; fill: #111827; }
+      .small { font-family: Arial, Helvetica, sans-serif; font-size: 17px; fill: #374151; }
+      .tiny { font-family: Arial, Helvetica, sans-serif; font-size: 15px; fill: #4b5563; }
+      .module { fill: #ffffff; stroke: #1f2937; stroke-width: 2.2; rx: 14; }
+      .soft-blue { fill: #e8f2ff; stroke: #2563eb; }
+      .soft-cyan { fill: #e5fbff; stroke: #0891b2; }
+      .soft-green { fill: #eaf8ef; stroke: #16a34a; }
+      .soft-amber { fill: #fff7e6; stroke: #d97706; }
+      .soft-purple { fill: #f2eefe; stroke: #7c3aed; }
+      .soft-red { fill: #fff1f2; stroke: #e11d48; }
+      .arrow { stroke: #374151; stroke-width: 2.4; fill: none; marker-end: url(#arrowhead); }
+      .thin-arrow { stroke: #6b7280; stroke-width: 1.8; fill: none; marker-end: url(#arrowhead-gray); }
+      .dashed { stroke-dasharray: 7 7; }
+      .visit-band { fill: #f9fafb; stroke: #d1d5db; stroke-width: 1.5; rx: 18; }
+      .stage-title { font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 700; fill: #374151; }
+    </style>
+    <marker id="arrowhead" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto">
+      <path d="M0,0 L12,4 L0,8 Z" fill="#374151"/>
+    </marker>
+    <marker id="arrowhead-gray" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto">
+      <path d="M0,0 L12,4 L0,8 Z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect width="1800" height="1080" fill="#ffffff"/>
+
+  <text x="900" y="58" text-anchor="middle" class="title">Overall Architecture of the Proposed Longitudinal Fetal Hydronephrosis Model</text>
+  <text x="900" y="92" text-anchor="middle" class="subtitle">RCC-Pooling for intra-visit image aggregation, concatenation-based multimodal fusion, and TD-ConvGRU for irregular longitudinal modeling</text>
+
+  <!-- Left visit processing block -->
+  <rect x="70" y="150" width="735" height="730" class="visit-band"/>
+  <text x="105" y="187" class="stage-title">Visit-level Representation Learning</text>
+
+  <!-- Input boxes -->
+  <rect x="105" y="230" width="210" height="90" class="module soft-blue"/>
+  <text x="210" y="266" text-anchor="middle" class="label">Ultrasound</text>
+  <text x="210" y="292" text-anchor="middle" class="small">images in visit t</text>
+
+  <rect x="105" y="392" width="210" height="90" class="module soft-green"/>
+  <text x="210" y="428" text-anchor="middle" class="label">Report Text</text>
+  <text x="210" y="454" text-anchor="middle" class="small">free-text finding</text>
+
+  <rect x="105" y="554" width="210" height="98" class="module soft-amber"/>
+  <text x="210" y="590" text-anchor="middle" class="label">Structured</text>
+  <text x="210" y="616" text-anchor="middle" class="small">time, phase,</text>
+  <text x="210" y="640" text-anchor="middle" class="small">image mask</text>
+
+  <!-- Encoders -->
+  <rect x="380" y="222" width="235" height="106" class="module soft-blue"/>
+  <text x="497" y="259" text-anchor="middle" class="label">Frozen</text>
+  <text x="497" y="285" text-anchor="middle" class="small">FetalCLIP image</text>
+  <text x="497" y="309" text-anchor="middle" class="small">encoder</text>
+
+  <rect x="380" y="384" width="235" height="106" class="module soft-green"/>
+  <text x="497" y="421" text-anchor="middle" class="label">Frozen</text>
+  <text x="497" y="447" text-anchor="middle" class="small">FetalCLIP text</text>
+  <text x="497" y="471" text-anchor="middle" class="small">encoder</text>
+
+  <rect x="380" y="556" width="235" height="94" class="module soft-amber"/>
+  <text x="497" y="593" text-anchor="middle" class="label">Normalization</text>
+  <text x="497" y="620" text-anchor="middle" class="small">and scaling</text>
+
+  <!-- RCC pooling -->
+  <rect x="655" y="206" width="315" height="138" class="module soft-cyan"/>
+  <text x="812" y="246" text-anchor="middle" class="label">RCC-Pooling</text>
+  <text x="812" y="274" text-anchor="middle" class="small">Reliability-Calibrated</text>
+  <text x="812" y="300" text-anchor="middle" class="small">Consensus Pooling</text>
+  <text x="812" y="325" text-anchor="middle" class="tiny">robust multi-image aggregation</text>
+
+  <!-- Feature outputs -->
+  <rect x="1018" y="234" width="170" height="82" class="module soft-cyan"/>
+  <text x="1103" y="267" text-anchor="middle" class="label">Image</text>
+  <text x="1103" y="293" text-anchor="middle" class="small">feature</text>
+
+  <rect x="1018" y="396" width="170" height="82" class="module soft-green"/>
+  <text x="1103" y="429" text-anchor="middle" class="label">Text</text>
+  <text x="1103" y="455" text-anchor="middle" class="small">feature</text>
+
+  <rect x="1018" y="560" width="170" height="82" class="module soft-amber"/>
+  <text x="1103" y="593" text-anchor="middle" class="label">Clinical</text>
+  <text x="1103" y="619" text-anchor="middle" class="small">context</text>
+
+  <!-- Concatenation -->
+  <rect x="1242" y="360" width="245" height="146" class="module soft-purple"/>
+  <text x="1364" y="400" text-anchor="middle" class="label">Concatenation</text>
+  <text x="1364" y="428" text-anchor="middle" class="label">Fusion</text>
+  <text x="1364" y="459" text-anchor="middle" class="small">[image, text, time]</text>
+  <text x="1364" y="484" text-anchor="middle" class="tiny">visit representation v<tspan baseline-shift="sub">t</tspan></text>
+
+  <!-- Sequence stack -->
+  <rect x="1075" y="740" width="400" height="90" class="module soft-purple"/>
+  <text x="1275" y="775" text-anchor="middle" class="label">Visit Sequence</text>
+  <text x="1275" y="803" text-anchor="middle" class="small">V = {v<tspan baseline-shift="sub">1</tspan>, v<tspan baseline-shift="sub">2</tspan>, ..., v<tspan baseline-shift="sub">T</tspan>}</text>
+
+  <!-- Right temporal block -->
+  <rect x="860" y="150" width="870" height="730" class="visit-band"/>
+  <text x="895" y="187" class="stage-title">Irregular Longitudinal Modeling</text>
+
+  <!-- TDConvGRU expanded -->
+  <rect x="900" y="220" width="775" height="420" class="module soft-red"/>
+  <text x="1288" y="260" text-anchor="middle" class="label">TD-ConvGRU</text>
+  <text x="1288" y="288" text-anchor="middle" class="small">Temporal-Difference Convolutional GRU</text>
+
+  <rect x="940" y="330" width="180" height="92" class="module soft-red"/>
+  <text x="1030" y="363" text-anchor="middle" class="label">Projection</text>
+  <text x="1030" y="389" text-anchor="middle" class="small">visit feature</text>
+  <text x="1030" y="411" text-anchor="middle" class="tiny">to d-model</text>
+
+  <rect x="940" y="484" width="180" height="92" class="module soft-amber"/>
+  <text x="1030" y="517" text-anchor="middle" class="label">Time / Phase</text>
+  <text x="1030" y="543" text-anchor="middle" class="small">condition</text>
+  <text x="1030" y="565" text-anchor="middle" class="tiny">delta, prenatal/postnatal</text>
+
+  <rect x="1190" y="324" width="220" height="104" class="module soft-red"/>
+  <text x="1300" y="358" text-anchor="middle" class="label">Local Temporal</text>
+  <text x="1300" y="384" text-anchor="middle" class="small">Conv, k = 3</text>
+  <text x="1300" y="407" text-anchor="middle" class="tiny">short-term changes</text>
+
+  <rect x="1190" y="478" width="220" height="104" class="module soft-red"/>
+  <text x="1300" y="512" text-anchor="middle" class="label">Local Temporal</text>
+  <text x="1300" y="538" text-anchor="middle" class="small">Conv, k = 5</text>
+  <text x="1300" y="561" text-anchor="middle" class="tiny">wider follow-up window</text>
+
+  <rect x="1468" y="400" width="170" height="116" class="module soft-red"/>
+  <text x="1553" y="435" text-anchor="middle" class="label">BiGRU</text>
+  <text x="1553" y="462" text-anchor="middle" class="small">global</text>
+  <text x="1553" y="486" text-anchor="middle" class="small">context</text>
+
+  <!-- Output -->
+  <rect x="1165" y="710" width="245" height="110" class="module soft-green"/>
+  <text x="1288" y="748" text-anchor="middle" class="label">Classifier</text>
+  <text x="1288" y="776" text-anchor="middle" class="small">obstruction risk</text>
+  <text x="1288" y="800" text-anchor="middle" class="tiny">sigmoid probability</text>
+
+  <rect x="1490" y="724" width="185" height="82" class="module soft-green"/>
+  <text x="1582" y="758" text-anchor="middle" class="label">Prediction</text>
+  <text x="1582" y="784" text-anchor="middle" class="small">0 / 1 label</text>
+
+  <!-- Arrows visit side -->
+  <path d="M315 275 C340 275, 352 275, 380 275" class="arrow"/>
+  <path d="M315 437 C340 437, 352 437, 380 437" class="arrow"/>
+  <path d="M315 603 C340 603, 352 603, 380 603" class="arrow"/>
+  <path d="M615 275 C632 275, 640 275, 655 275" class="arrow"/>
+  <path d="M970 275 C990 275, 1000 275, 1018 275" class="arrow"/>
+  <path d="M615 437 C770 437, 890 437, 1018 437" class="arrow"/>
+  <path d="M615 603 C770 603, 890 603, 1018 603" class="arrow"/>
+  <path d="M1188 275 C1230 292, 1258 326, 1288 360" class="arrow"/>
+  <path d="M1188 437 C1208 437, 1222 437, 1242 437" class="arrow"/>
+  <path d="M1188 601 C1238 568, 1278 525, 1307 506" class="arrow"/>
+  <path d="M1364 506 C1364 602, 1306 662, 1275 740" class="arrow"/>
+
+  <!-- Sequence to TDConvGRU -->
+  <path d="M1275 740 C1275 692, 1230 668, 1160 640" class="arrow"/>
+  <path d="M1120 640 C1056 608, 1034 558, 1030 576" class="thin-arrow dashed"/>
+  <path d="M1120 640 C1034 572, 1030 480, 1030 422" class="arrow"/>
+
+  <!-- TDConvGRU inner arrows -->
+  <path d="M1120 376 C1144 376, 1162 376, 1190 376" class="arrow"/>
+  <path d="M1120 530 C1144 530, 1162 530, 1190 530" class="arrow"/>
+  <path d="M1410 376 C1440 392, 1452 412, 1468 438" class="arrow"/>
+  <path d="M1410 530 C1440 510, 1452 488, 1468 470" class="arrow"/>
+  <path d="M1553 516 C1553 610, 1368 658, 1288 710" class="arrow"/>
+  <path d="M1410 765 C1440 765, 1460 765, 1490 765" class="arrow"/>
+
+  <!-- Panel labels -->
+  <text x="438" y="924" text-anchor="middle" class="small">Each visit is encoded independently using frozen FetalCLIP encoders and RCC-Pooling.</text>
+  <text x="1295" y="924" text-anchor="middle" class="small">All visits are modeled jointly with time-aware local convolutions and global bidirectional recurrence.</text>
+
+  <!-- Legend -->
+  <rect x="90" y="980" width="24" height="16" class="soft-cyan"/>
+  <text x="125" y="994" class="tiny">Image aggregation</text>
+  <rect x="300" y="980" width="24" height="16" class="soft-purple"/>
+  <text x="335" y="994" class="tiny">Multimodal fusion</text>
+  <rect x="515" y="980" width="24" height="16" class="soft-red"/>
+  <text x="550" y="994" class="tiny">Longitudinal modeling</text>
+  <rect x="755" y="980" width="24" height="16" class="soft-amber"/>
+  <text x="790" y="994" class="tiny">Temporal / clinical context</text>
+</svg>
