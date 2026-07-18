@@ -70,10 +70,10 @@ USE_EXPLICIT_TIME = TEMPORAL_EXPERIMENT not in NO_EXPLICIT_TIME_EXPERIMENTS
 RAW_ROOT = Path(r"G:\wxy_codes\dataset_hydro_123\raw")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_ROOT = PROJECT_ROOT / "output_add_metrics"
+OUTPUT_ROOT = PROJECT_ROOT / "output4_add_metrics_struct_dim"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 63
+EXP_ID = 66
 #EXP_ID = int(os.environ.get("EXP_ID", 34))
 
 
