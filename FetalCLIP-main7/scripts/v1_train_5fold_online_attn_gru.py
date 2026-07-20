@@ -61,6 +61,11 @@ from models.longitudinal_gru_classifier import ModularGRUSideClassifier
 from utils.metrics import compute_binary_metrics
 
 
+from wx_config import APP_TOKEN, UID
+import traceback
+from datetime import datetime
+import requests
+
 N_SPLITS = 5
 
 
@@ -558,6 +563,59 @@ def summarize_fold_metrics(fold_metric_rows):
     return summary
 
 
+
+def send_wxpusher_message(
+    title: str,
+    content: str,
+    timeout: int = 15,
+) -> bool:
+    """
+    使用 WxPusher 向手机发送消息。
+
+    返回：
+        True：请求发送成功
+        False：发送失败，但不会导致训练程序再次报错
+    """
+    api_url = "https://wxpusher.zjiecode.com/api/send/message"
+
+    message = (
+        f"## {title}\n\n"
+        f"{content}\n\n"
+        f"发送时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    )
+
+    payload = {
+        "appToken": APP_TOKEN,
+        "content": message,
+        "contentType": 3,  # Markdown
+        "uids": [UID],
+    }
+
+    try:
+        response = requests.post(
+            api_url,
+            json=payload,
+            timeout=timeout,
+        )
+        response.raise_for_status()
+
+        result = response.json()
+
+        # WxPusher 正常成功时通常 code 为 1000
+        if result.get("code") == 1000:
+            print("WxPusher message sent successfully.")
+            return True
+
+        print(f"WxPusher returned an error: {result}")
+        return False
+
+    except Exception as exc:
+        # 推送失败不应影响已经完成的实验结果
+        print(f"Failed to send WxPusher message: {exc}")
+        return False
+
+
+
 def main():
     set_seed(SEED)
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
@@ -757,6 +815,67 @@ def main():
     print(f"pooled metrics: {pooled_metric_save_path}")
     print(f"nested CV epoch selection: {epoch_selection_save_path}")
 
+    success_content = (
+        f"实验已正常完成。\n\n"
+        f"- 输入模态：{INPUT_MODALITY}\n"
+        f"- 时间实验：{TEMPORAL_EXPERIMENT}\n"
+        f"- 交叉验证：{N_SPLITS} 折\n"
+        f"- 样本数量：{len(samples)}\n"
+        f"- 病例数量：{len(case_ids)}\n"
+        f"- 结果目录：`{RESULT_DIR}`\n\n"
+        f"主要结果：\n"
+        f"```text\n"
+        f"{pooled_metrics}\n"
+        f"```"
+    )
+
+    send_wxpusher_message(
+        title="胎儿肾积水实验运行完成",
+        content=success_content,
+    )
+
+
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+
+    except KeyboardInterrupt:
+        print("\nProgram was manually interrupted.")
+
+        send_wxpusher_message(
+            title="胎儿肾积水实验已手动停止",
+            content="程序收到 KeyboardInterrupt，通常表示运行过程中按下了 Ctrl+C。",
+        )
+
+        raise
+
+    except Exception as exc:
+        error_traceback = traceback.format_exc()
+
+        print("\nProgram failed:")
+        print(error_traceback)
+
+        # 避免异常信息过长
+        max_length = 5000
+        if len(error_traceback) > max_length:
+            error_traceback = error_traceback[-max_length:]
+            error_traceback = (
+                "错误信息过长，以下仅显示最后一部分：\n\n"
+                + error_traceback
+            )
+
+        send_wxpusher_message(
+            title="胎儿肾积水实验运行失败",
+            content=(
+                f"程序运行过程中发生异常。\n\n"
+                f"错误类型：`{type(exc).__name__}`\n\n"
+                f"错误信息：`{exc}`\n\n"
+                f"```text\n"
+                f"{error_traceback}\n"
+                f"```"
+            ),
+        )
+
+        # 重新抛出异常，保留终端中的正常报错行为
+        raise

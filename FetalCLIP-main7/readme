@@ -61,12 +61,17 @@ python scripts\v1_train_5fold_online_attn_gru.py
 
 conda activate wxy_fetalclip
 
+cd G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main7
+python scripts\v1_train_5fold_online_attn_gru.py
+
+
+
 conda activate wxy_fetalclip_contiformer
 训练:
 (训练前在G:\wxy_codes\Fetal_hydronephrosis\FetalCLpython G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main4\scripts\v1_train_loocv_online_attn_contiformer.pyIP-main4\configs\config_online_attn.py修改结果保存的路径)
 
 
-cd G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main6
+
 
 ##参数实验
 python run_epoch_experiments.py

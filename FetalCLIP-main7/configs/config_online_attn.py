@@ -24,7 +24,7 @@ TEMPORAL_BACKBONE = "td_conv_gru"
 #   image_only: image + structural/time features (text is not encoded)
 #   text_only:  text + structural/time features (images are not encoded and
 #               image availability is not exposed to the classifier)
-INPUT_MODALITY = os.environ.get("INPUT_MODALITY", "multimodal").strip().lower()
+INPUT_MODALITY = os.environ.get("INPUT_MODALITY", "text_only").strip().lower()
 VALID_INPUT_MODALITIES = {"multimodal", "image_only", "text_only"}
 if INPUT_MODALITY not in VALID_INPUT_MODALITIES:
     raise ValueError(
@@ -67,13 +67,13 @@ USE_EXPLICIT_TIME = TEMPORAL_EXPERIMENT not in NO_EXPLICIT_TIME_EXPERIMENTS
 # =========================
 # 1. 数据路径配置
 # =========================
-RAW_ROOT = Path(r"G:\wxy_codes\dataset_hydro_123\raw")
+RAW_ROOT = Path(r"G:\wxy_codes\dataset_hydro_1234\raw")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_ROOT = PROJECT_ROOT / "output4_add_metrics_struct_dim"
+OUTPUT_ROOT = PROJECT_ROOT / "output5_dataset_hydro_1234"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 66
+EXP_ID = 84
 #EXP_ID = int(os.environ.get("EXP_ID", 34))
 
 
@@ -137,7 +137,7 @@ if EARLY_STOPPING_MIN_DELTA < 0:
 LR = 1e-3
 WEIGHT_DECAY = 1e-4
 DROPOUT = 0.3
-BATCH_SIZE = 8
+BATCH_SIZE = 16
 
 # 是否使用 pos_weight 处理类别不平衡。
 # 你之前发现 USE_POS_WEIGHT=False 时 GRU 结果更稳，所以这里默认 False。
