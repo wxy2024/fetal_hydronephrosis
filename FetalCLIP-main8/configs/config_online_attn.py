@@ -8,7 +8,7 @@ from pathlib import Path
 
 # 图像聚合方式：
 # mean / attention / gated_mil / text_cross_attention / sra_gated_mil / rrs_gated_mil / rcc_pooling / vcm_pooling / pgs_pooling
-IMAGE_POOLING_TYPE = "attention"
+IMAGE_POOLING_TYPE = "rcc_pooling"
 
 # 检查级融合方式：
 # direct_concat / gated_multimodal / film_gated_multimodal / transformer_token
@@ -16,7 +16,7 @@ VISIT_FUSION_TYPE = "direct_concat"
 
 FUSION_HIDDEN_DIM = None
 
-TEMPORAL_BACKBONE = "td_conv_gru"
+TEMPORAL_BACKBONE = "gru"
 # mean_pooling / simple_fusion / gru / gru_d / risk_gru / td_conv_gru / bit_gru / tripg_gru / ca_grud / psalm_grud / contiformer
 
 # Input modality ablation:
@@ -73,7 +73,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "output6_rebuttal"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 1003
+EXP_ID = 1007
 #EXP_ID = int(os.environ.get("EXP_ID", 34))
 
 
@@ -114,7 +114,7 @@ MAX_REPORT_CHARS = 512
 # =========================
 # 4. 训练配置
 # =========================
-SEED = 60
+SEED = 10086
 # epoch 没标注就默认是50
 # Nested CV treats this as the maximum number of epochs considered by each
 # inner fold.  The selected epoch is then used to retrain on the complete
