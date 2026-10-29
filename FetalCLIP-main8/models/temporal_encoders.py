@@ -1084,6 +1084,7 @@ class TDConvGRUEncoder(nn.Module):
         bidirectional=True,
         img_dim=None,
         d_model=512,
+        use_temporal_conv=True,
     ):
         super().__init__()
 
@@ -1101,20 +1102,22 @@ class TDConvGRUEncoder(nn.Module):
             nn.Linear(d_model, d_model),
         )
 
-        self.short_conv = DepthwiseSeparableTemporalConv(
-            d_model=d_model,
-            kernel_size=3,
-            dropout=dropout,
-        )
-        self.mid_conv = DepthwiseSeparableTemporalConv(
-            d_model=d_model,
-            kernel_size=5,
-            dropout=dropout,
-        )
+        self.use_temporal_conv = use_temporal_conv
+        if use_temporal_conv:
+            self.short_conv = DepthwiseSeparableTemporalConv(
+                d_model=d_model,
+                kernel_size=3,
+                dropout=dropout,
+            )
+            self.mid_conv = DepthwiseSeparableTemporalConv(
+                d_model=d_model,
+                kernel_size=5,
+                dropout=dropout,
+            )
 
         self.local_fusion = nn.Sequential(
-            nn.LayerNorm(d_model * 3),
-            nn.Linear(d_model * 3, d_model),
+            nn.LayerNorm(d_model * (3 if use_temporal_conv else 1)),
+            nn.Linear(d_model * (3 if use_temporal_conv else 1), d_model),
             nn.GELU(),
             nn.Dropout(dropout),
         )
@@ -1151,11 +1154,13 @@ class TDConvGRUEncoder(nn.Module):
         conditioned = base + self.time_phase_proj(time_phase)
         conditioned = conditioned * mask.unsqueeze(-1).float()
 
-        short_feat = self.short_conv(conditioned, mask)
-        mid_feat = self.mid_conv(conditioned, mask)
-        enhanced = self.local_fusion(
-            torch.cat([conditioned, short_feat, mid_feat], dim=-1)
-        )
+        if self.use_temporal_conv:
+            short_feat = self.short_conv(conditioned, mask)
+            mid_feat = self.mid_conv(conditioned, mask)
+            fusion_input = torch.cat([conditioned, short_feat, mid_feat], dim=-1)
+        else:
+            fusion_input = conditioned
+        enhanced = self.local_fusion(fusion_input)
         enhanced = enhanced * mask.unsqueeze(-1).float()
 
         packed = pack_padded_sequence(
@@ -1170,6 +1175,24 @@ class TDConvGRUEncoder(nn.Module):
             return torch.cat([h_n[-2], h_n[-1]], dim=1)
 
         return h_n[-1]
+
+
+class TDConvGRUNoConvEncoder(TDConvGRUEncoder):
+    """MT-ConvGRU ablation without temporal convolution.
+
+    Keeps input projection, explicit time/phase conditioning, pointwise
+    fusion and GRU. Fusion takes one d_model branch rather than three;
+    consequently parameter count is reduced. No convolution is instantiated.
+    This is distinct from both ordinary GRU and no-explicit-time ablations.
+    """
+
+    def __init__(self, input_dim, hidden_dim=128, num_layers=1, dropout=0.3,
+                 bidirectional=True, img_dim=None, d_model=512):
+        super().__init__(
+            input_dim=input_dim, hidden_dim=hidden_dim, num_layers=num_layers,
+            dropout=dropout, bidirectional=bidirectional, img_dim=img_dim,
+            d_model=d_model, use_temporal_conv=False,
+        )
 
 
 class SimpleFusionEncoder(nn.Module):
@@ -1344,6 +1367,13 @@ def build_temporal_encoder(
             dropout=dropout,
             bidirectional=False,
             img_dim=img_dim,
+        )
+
+    if name == "td_conv_gru_no_conv":
+        return TDConvGRUNoConvEncoder(
+            input_dim=input_dim, hidden_dim=hidden_dim, num_layers=num_layers,
+            dropout=dropout, bidirectional=bidirectional, img_dim=img_dim,
+            d_model=512,
         )
 
     if name in [
