@@ -24,7 +24,7 @@ TEMPORAL_BACKBONE = "td_conv_gru"
 #   image_only: image + structural/time features (text is not encoded)
 #   text_only:  text + structural/time features (images are not encoded and
 #               image availability is not exposed to the classifier)
-INPUT_MODALITY = os.environ.get("INPUT_MODALITY", "multimodal").strip().lower()
+INPUT_MODALITY = os.environ.get("INPUT_MODALITY", "text_only").strip().lower()
 VALID_INPUT_MODALITIES = {"multimodal", "image_only", "text_only"}
 if INPUT_MODALITY not in VALID_INPUT_MODALITIES:
     raise ValueError(
@@ -73,7 +73,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "output5_dataset_hydro_1234"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 98
+EXP_ID = 99
 #EXP_ID = int(os.environ.get("EXP_ID", 34))
 
 
@@ -114,7 +114,7 @@ MAX_REPORT_CHARS = 512
 # =========================
 # 4. 训练配置
 # =========================
-SEED = 50
+SEED = 99
 # epoch 没标注就默认是50
 # Nested CV treats this as the maximum number of epochs considered by each
 # inner fold.  The selected epoch is then used to retrain on the complete

@@ -1,3 +1,7 @@
+## python G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main7\compute_oof_cluster_bootstrap_ci.py "D:\github_codes\fetal_hydronephrosis\FetalCLIP-main6\output\5fold_predictions.csv" 
+
+
+
 r"""
 Compute 95% confidence intervals from outer-fold OOF predictions.
 

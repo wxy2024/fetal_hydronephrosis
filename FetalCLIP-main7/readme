@@ -47,8 +47,7 @@ results_14  用前三大批合并后的数据集训练测试
 
 
 
-cd G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main6
-python scripts\v1_train_5fold_online_attn_gru.py
+cd G:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main7
 
 
 

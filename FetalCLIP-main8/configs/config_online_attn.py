@@ -8,7 +8,7 @@ from pathlib import Path
 
 # 图像聚合方式：
 # mean / attention / gated_mil / text_cross_attention / sra_gated_mil / rrs_gated_mil / rcc_pooling / vcm_pooling / pgs_pooling
-IMAGE_POOLING_TYPE = "rcc_pooling"
+IMAGE_POOLING_TYPE = "attention"
 
 # 检查级融合方式：
 # direct_concat / gated_multimodal / film_gated_multimodal / transformer_token
@@ -67,18 +67,18 @@ USE_EXPLICIT_TIME = TEMPORAL_EXPERIMENT not in NO_EXPLICIT_TIME_EXPERIMENTS
 # =========================
 # 1. 数据路径配置
 # =========================
-RAW_ROOT = Path(r"G:\wxy_codes\dataset_hydro_1234\raw")
+RAW_ROOT = Path(r"E:\wxy_codes\dataset_hydro_1234\raw")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_ROOT = PROJECT_ROOT / "output5_dataset_hydro_1234"
+OUTPUT_ROOT = PROJECT_ROOT / "output6_rebuttal"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 98
+EXP_ID = 1001
 #EXP_ID = int(os.environ.get("EXP_ID", 34))
 
 
 RESULT_DIR = OUTPUT_ROOT / (
-    f"results_{EXP_ID}_dataset_123"
+    f"rebuttal_{EXP_ID}_dataset_1234"
     f"_fig_{IMAGE_POOLING_TYPE}"
     f"_visit_{VISIT_FUSION_TYPE}"
     f"_{TEMPORAL_BACKBONE}"
