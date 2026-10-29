@@ -73,7 +73,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "output6_rebuttal"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 1001
+EXP_ID = 1003
 #EXP_ID = int(os.environ.get("EXP_ID", 34))
 
 
@@ -114,7 +114,7 @@ MAX_REPORT_CHARS = 512
 # =========================
 # 4. 训练配置
 # =========================
-SEED = 50
+SEED = 60
 # epoch 没标注就默认是50
 # Nested CV treats this as the maximum number of epochs considered by each
 # inner fold.  The selected epoch is then used to retrain on the complete
@@ -137,7 +137,7 @@ if EARLY_STOPPING_MIN_DELTA < 0:
 LR = 1e-3
 WEIGHT_DECAY = 1e-4
 DROPOUT = 0.3
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 
 # 是否使用 pos_weight 处理类别不平衡。
 # 你之前发现 USE_POS_WEIGHT=False 时 GRU 结果更稳，所以这里默认 False。
