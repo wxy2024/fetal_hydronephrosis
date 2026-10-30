@@ -1,0 +1,31 @@
+{
+  "status": "complete",
+  "smoke_test": true,
+  "result_dir": "E:\\wxy_codes\\Fetal_hydronephrosis\\FetalCLIP-main8\\output6_rebuttal\\rebuttal_69_dataset_1234_fig_rcc_pooling_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline",
+  "data_root": "E:\\wxy_codes\\dataset_hydro_1234\\raw",
+  "min_visits": 6,
+  "prefixes": [
+    2,
+    3,
+    4,
+    5
+  ],
+  "seed": 42,
+  "n_bootstrap": 100,
+  "n_permutations": 100,
+  "n_patients": 10,
+  "n_renal_units": 20,
+  "prediction_sha256": "aa9ac427ec9f074f1cb7a5ab58287c16a1dc93e6e7a7d3833b7d1809ec488ee3",
+  "checkpoint_sha256": {
+    "fold_1": "f3d6327eaa0919e4d79b8823ce78b8b17c1eae090fac4d77bed04f6c6d5f0926",
+    "fold_2": "75922775ad1b49d3fb878d75fe57ee2e9a5a4548051b17d0dec2d0498953c96f",
+    "fold_3": "9577510e7bc21bc61002e863609da6a502447e3935ef365d621bb262d2a3e4ed",
+    "fold_4": "ddbc90cacb19e425f73e9b08f5764543ab3c70ec4940866fa7d09a0cb8941388",
+    "fold_5": "80075289e94df6d8881f90c7144900cf1748ee4e954859adf081d6ac902f4107"
+  },
+  "fetalclip_weight_sha256": "90916caa408baf9374ee3f8c1533463331a4ace37a13e61385e782905b35c310",
+  "fetalclip_config_sha256": "c8255e32fe0c684ce8c8dc9e64d845572449db151d5b21a6219f8c291fcb5792",
+  "script_sha256": "324525f548cbe3b1494151c39ed7206992dbde5168b17185a5f8f90c74c51d27",
+  "holm_family": "All 7 comparisons x 9 metrics (63 tests)",
+  "inference_scope": "Fixed-model OOF prefix sensitivity analysis; conditional on fitted models, not time-to-event prediction"
+}
