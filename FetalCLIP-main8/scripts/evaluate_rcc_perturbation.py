@@ -10,7 +10,7 @@ if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
 DATA_ROOT = Path(r'E:\wxy_codes\dataset_hydro_1234\raw')
 MODEL_DIRS = {
  'rcc_pooling': Path(r'E:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main7\output5_dataset_hydro_1234\results_69_dataset_123_fig_rcc_pooling_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline'),
- 'attention': Path(r'E:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main8\output6_rebuttal\rebuttal_1002_dataset_1234_fig_attention_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline'),
+ 'attention': Path(r'E:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main8\output6_rebuttal\rebuttal_1001_dataset_1234_fig_attention_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline'),
 }
 FETALCLIP_WEIGHTS = Path(r'E:\wxy_codes\Fetal_hydronephrosis\FetalCLIP-main8\FetalCLIP_weights.pt')
 FETALCLIP_CONFIG = ROOT / 'FetalCLIP_config.json'
