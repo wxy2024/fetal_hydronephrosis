@@ -59,6 +59,7 @@ from data.temporal_ablations import (
 from fetalclip.fetalclip_wrapper import FetalCLIPFeatureExtractor
 from models.longitudinal_gru_classifier import ModularGRUSideClassifier
 from utils.metrics import compute_binary_metrics
+from utils.checkpoint_io import save_final_checkpoint
 
 
 from wx_config import APP_TOKEN, UID
@@ -421,6 +422,50 @@ def train_one_fold(train_items, test_items, feature_dim: int, fold_id: str, test
     if outer_training_info["stopped_epoch"] != selected_epoch:
         raise RuntimeError("Outer retraining did not complete the selected epoch count.")
 
+    checkpoint_path = RESULT_DIR / fold_id / "final_model.pt"
+    metadata = {
+        "checkpoint_role": "final_outer_fold_model",
+        "fold_id": fold_id,
+        "seed": int(SEED),
+        "fold_seed": int(fold_seed),
+        "selected_epoch": int(selected_epoch),
+        "train_case_ids": sorted({str(x["case_id"]) for x in train_items}),
+        "test_case_ids": sorted({str(x["case_id"]) for x in test_items}),
+        "train_sample_ids": sorted(str(x["sample_id"]) for x in train_items),
+        "test_sample_ids": sorted(str(x["sample_id"]) for x in test_items),
+        "model_kwargs": {
+            "feature_dim": int(feature_dim),
+            "image_pooling_type": IMAGE_POOLING_TYPE,
+            "visit_fusion_type": VISIT_FUSION_TYPE,
+            "attn_hidden_dim": ATTN_HIDDEN_DIM,
+            "fusion_hidden_dim": FUSION_HIDDEN_DIM,
+            "gru_hidden_dim": GRU_HIDDEN_DIM,
+            "gru_num_layers": GRU_NUM_LAYERS,
+            "dropout": DROPOUT,
+            "bidirectional": GRU_BIDIRECTIONAL,
+            "temporal_backbone": TEMPORAL_BACKBONE,
+            "input_modality": INPUT_MODALITY,
+            "use_explicit_time": USE_EXPLICIT_TIME,
+        },
+        "training": {"lr": LR, "weight_decay": WEIGHT_DECAY,
+                     "batch_size": BATCH_SIZE, "use_pos_weight": USE_POS_WEIGHT,
+                     "max_epochs": NUM_EPOCHS, "inner_n_splits": INNER_N_SPLITS,
+                     "early_stopping_patience": EARLY_STOPPING_PATIENCE,
+                     "early_stopping_min_delta": EARLY_STOPPING_MIN_DELTA},
+        "temporal_experiment": TEMPORAL_EXPERIMENT,
+        "temporal_min_visits": TEMPORAL_MIN_VISITS,
+        "temporal_shuffle_seed": TEMPORAL_SHUFFLE_SEED,
+        "raw_root": str(RAW_ROOT),
+        "fetalclip_config_path": str(FETALCLIP_CONFIG_PATH),
+        "fetalclip_weight_path": str(FETALCLIP_WEIGHT_PATH),
+        "fetalclip_model_name": FETALCLIP_MODEL_NAME,
+        "fetalclip_frozen": True,
+        "inner_epoch_selection": selection_rows,
+        "torch_version": str(torch.__version__),
+    }
+    save_final_checkpoint(model, checkpoint_path, metadata)
+    print(f"Saved final outer-fold checkpoint: {checkpoint_path}")
+
     model.eval()
     fold_results = []
 
@@ -465,6 +510,9 @@ def train_one_fold(train_items, test_items, feature_dim: int, fold_id: str, test
                 }
             )
 
+    pd.DataFrame(fold_results).to_csv(
+        RESULT_DIR / fold_id / "predictions.csv", index=False, encoding="utf-8-sig"
+    )
     return fold_results, selection_rows, selected_epoch
 
 
@@ -618,6 +666,12 @@ def send_wxpusher_message(
 
 def main():
     set_seed(SEED)
+    # Do not mix newly trained weights with old predictions or a partial run.
+    if RESULT_DIR.exists() and any(RESULT_DIR.iterdir()):
+        raise FileExistsError(
+            f"Result directory is not empty: {RESULT_DIR}. "
+            "Set a new EXP_ID before training; existing results are preserved."
+        )
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
     print("=" * 80)
