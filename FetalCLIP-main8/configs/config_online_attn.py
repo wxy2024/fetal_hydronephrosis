@@ -16,7 +16,7 @@ VISIT_FUSION_TYPE = "direct_concat"
 
 FUSION_HIDDEN_DIM = None
 
-TEMPORAL_BACKBONE = "gru"
+TEMPORAL_BACKBONE = "td_conv_gru"
 # mean_pooling / simple_fusion / gru / gru_d / risk_gru / td_conv_gru / td_conv_gru_no_conv / bit_gru / tripg_gru / ca_grud / psalm_grud / contiformer
 
 # Input modality ablation:
@@ -73,7 +73,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "output6_rebuttal"
 #RESULT_DIR = OUTPUT_ROOT / "results_10_new1and2_fig_rrs_gated_mil_visit_film_gated_multimodal_contiformer"
 #结果文件命名改这两个
-EXP_ID = 1012
+EXP_ID = 69
 #EXP_ID = int(os.environ.get("EXP_ID", 34))
 
 
@@ -114,7 +114,7 @@ MAX_REPORT_CHARS = 512
 # =========================
 # 4. 训练配置
 # =========================
-SEED = 60
+SEED = 50
 # epoch 没标注就默认是50
 # Nested CV treats this as the maximum number of epochs considered by each
 # inner fold.  The selected epoch is then used to retrain on the complete
