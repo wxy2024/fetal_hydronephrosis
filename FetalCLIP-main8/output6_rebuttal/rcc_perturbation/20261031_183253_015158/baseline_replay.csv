@@ -1,5 +1,0 @@
-﻿model,case_id,sample_id,fold_id,probability,saved_probability
-rcc_pooling,case_0003,case_0003_left,fold_3,0.00447070924565196,0.004470722749829292
-attention,case_0003,case_0003_left,fold_3,0.001014137058518827,0.001014135079458356
-rcc_pooling,case_0015,case_0015_left,fold_4,0.9992314577102661,0.9992314577102661
-attention,case_0015,case_0015_left,fold_4,0.9985377788543701,0.9985377788543701

@@ -1,9 +1,0 @@
-﻿model,case_id,kind,nonincreasing,strictly_decreasing
-attention,case_0003,blur,1.0,1.0
-attention,case_0003,noise,0.0,0.0
-attention,case_0015,blur,0.0,0.0
-attention,case_0015,noise,0.0,0.0
-rcc_pooling,case_0003,blur,0.0,0.0
-rcc_pooling,case_0003,noise,0.0,0.0
-rcc_pooling,case_0015,blur,0.0,0.0
-rcc_pooling,case_0015,noise,0.0,0.0
