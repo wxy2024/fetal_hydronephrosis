@@ -1,0 +1,11 @@
+﻿model,fold_id,mixture_lambda,mean_branch_fraction
+rcc_pooling,fold_1,0.518695592880249,0.481304407119751
+attention,fold_1,,0.0
+rcc_pooling,fold_2,0.5183500051498413,0.4816499948501587
+attention,fold_2,,0.0
+rcc_pooling,fold_3,0.5115684270858765,0.48843157291412354
+attention,fold_3,,0.0
+rcc_pooling,fold_4,0.5115538835525513,0.48844611644744873
+attention,fold_4,,0.0
+rcc_pooling,fold_5,0.5156283974647522,0.4843716025352478
+attention,fold_5,,0.0

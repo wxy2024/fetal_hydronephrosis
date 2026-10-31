@@ -1,0 +1,5 @@
+﻿model,case_id,sample_id,fold_id,probability,saved_probability,absolute_error
+rcc_pooling,case_0198,case_0198_left,fold_2,0.998711347579956,0.998711347579956,0.0
+attention,case_0198,case_0198_left,fold_2,0.994272768497467,0.994272768497467,0.0
+rcc_pooling,case_0118,case_0118_left,fold_5,0.9973676800727844,0.9973676800727844,0.0
+attention,case_0118,case_0118_left,fold_5,0.9996328353881836,0.9996328353881836,0.0
