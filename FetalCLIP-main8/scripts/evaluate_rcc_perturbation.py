@@ -18,7 +18,7 @@ FETALCLIP_CONFIG = ROOT / 'FetalCLIP_config.json'
 CHECKPOINTS = {'rcc_pooling': {}, 'attention': {}}  # e.g. {'fold_1': Path(r'E:\...\fold_1.pt'), ...}
 OUTPUT_ROOT = ROOT / 'output6_rebuttal' / 'rcc_perturbation'
 SEED = 42
-MAX_PATIENTS = 2  # 0 = all eligible; set 2 for a smoke run
+MAX_PATIENTS = 0  # 0 = all eligible; set 2 for a smoke run
 NOISE_REPEATS = 5
 BOOTSTRAP_REPEATS = 10000
 PERTURBATIONS = {'blur': [1., 2., 4.], 'noise': [.02, .05, .10]}

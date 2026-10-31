@@ -1,0 +1,84 @@
+{
+  "seed": 42,
+  "max_patients": 0,
+  "selected_patients": 185,
+  "perturbations": {
+    "blur": [
+      1.0,
+      2.0,
+      4.0
+    ],
+    "noise": [
+      0.02,
+      0.05,
+      0.1
+    ]
+  },
+  "noise_repeats": 5,
+  "model_kwargs": {
+    "visit_fusion_type": "direct_concat",
+    "attn_hidden_dim": 256,
+    "fusion_hidden_dim": null,
+    "gru_hidden_dim": 128,
+    "gru_num_layers": 1,
+    "dropout": 0.3,
+    "bidirectional": true,
+    "temporal_backbone": "td_conv_gru",
+    "input_modality": "multimodal",
+    "use_explicit_time": true
+  },
+  "data_root": "E:\\wxy_codes\\dataset_hydro_1234\\raw",
+  "fetalclip_weights": "E:\\wxy_codes\\Fetal_hydronephrosis\\FetalCLIP-main8\\FetalCLIP_weights.pt",
+  "fetalclip_sha256": "90916caa408baf9374ee3f8c1533463331a4ace37a13e61385e782905b35c310",
+  "prediction_sha256": {
+    "rcc_pooling": "aa9ac427ec9f074f1cb7a5ab58287c16a1dc93e6e7a7d3833b7d1809ec488ee3",
+    "attention": "ac7fb4e8ec45d3dbe144b8471e34aa00c59ae0b0ecee3b36ec568218310fcb94"
+  },
+  "checkpoints": {
+    "rcc_pooling": {
+      "fold_1": {
+        "path": "E:\\wxy_codes\\Fetal_hydronephrosis\\FetalCLIP-main8\\output6_rebuttal\\rebuttal_69_dataset_1234_fig_rcc_pooling_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline\\fold_1\\final_model.pt",
+        "sha256": "f3d6327eaa0919e4d79b8823ce78b8b17c1eae090fac4d77bed04f6c6d5f0926"
+      },
+      "fold_2": {
+        "path": "E:\\wxy_codes\\Fetal_hydronephrosis\\FetalCLIP-main8\\output6_rebuttal\\rebuttal_69_dataset_1234_fig_rcc_pooling_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline\\fold_2\\final_model.pt",
+        "sha256": "75922775ad1b49d3fb878d75fe57ee2e9a5a4548051b17d0dec2d0498953c96f"
+      },
+      "fold_3": {
+        "path": "E:\\wxy_codes\\Fetal_hydronephrosis\\FetalCLIP-main8\\output6_rebuttal\\rebuttal_69_dataset_1234_fig_rcc_pooling_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline\\fold_3\\final_model.pt",
+        "sha256": "9577510e7bc21bc61002e863609da6a502447e3935ef365d621bb262d2a3e4ed"
+      },
+      "fold_4": {
+        "path": "E:\\wxy_codes\\Fetal_hydronephrosis\\FetalCLIP-main8\\output6_rebuttal\\rebuttal_69_dataset_1234_fig_rcc_pooling_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline\\fold_4\\final_model.pt",
+        "sha256": "ddbc90cacb19e425f73e9b08f5764543ab3c70ec4940866fa7d09a0cb8941388"
+      },
+      "fold_5": {
+        "path": "E:\\wxy_codes\\Fetal_hydronephrosis\\FetalCLIP-main8\\output6_rebuttal\\rebuttal_69_dataset_1234_fig_rcc_pooling_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline\\fold_5\\final_model.pt",
+        "sha256": "80075289e94df6d8881f90c7144900cf1748ee4e954859adf081d6ac902f4107"
+      }
+    },
+    "attention": {
+      "fold_1": {
+        "path": "E:\\wxy_codes\\Fetal_hydronephrosis\\FetalCLIP-main8\\output6_rebuttal\\rebuttal_1013_dataset_1234_fig_attention_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline\\fold_1\\final_model.pt",
+        "sha256": "77eb5b4831da56bbf350dbd369d95dc22a24720becc948ef9a03933a46e381ca"
+      },
+      "fold_2": {
+        "path": "E:\\wxy_codes\\Fetal_hydronephrosis\\FetalCLIP-main8\\output6_rebuttal\\rebuttal_1013_dataset_1234_fig_attention_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline\\fold_2\\final_model.pt",
+        "sha256": "523ffa810837c49fb8dc5e0be649b97b735e7a01519566d954932eff91bcd173"
+      },
+      "fold_3": {
+        "path": "E:\\wxy_codes\\Fetal_hydronephrosis\\FetalCLIP-main8\\output6_rebuttal\\rebuttal_1013_dataset_1234_fig_attention_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline\\fold_3\\final_model.pt",
+        "sha256": "806248566a043b4a51f6c1a46ad9dfe5389cbaeee1408063ccfaf809fa5b2594"
+      },
+      "fold_4": {
+        "path": "E:\\wxy_codes\\Fetal_hydronephrosis\\FetalCLIP-main8\\output6_rebuttal\\rebuttal_1013_dataset_1234_fig_attention_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline\\fold_4\\final_model.pt",
+        "sha256": "8d6522e6309cbe59a8c49ca4b29b9ef2b4cdb30fc4b3542bd38a5a9f463c188d"
+      },
+      "fold_5": {
+        "path": "E:\\wxy_codes\\Fetal_hydronephrosis\\FetalCLIP-main8\\output6_rebuttal\\rebuttal_1013_dataset_1234_fig_attention_visit_direct_concat_td_conv_gru_modality_multimodal_temporal_baseline\\fold_5\\final_model.pt",
+        "sha256": "d7bacafe748c820063ff0473ac91f81d6b130fd02102d8d36435c2b66ebf8d21"
+      }
+    }
+  },
+  "status": "complete"
+}
